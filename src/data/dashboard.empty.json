@@ -1,0 +1,32 @@
+{
+  "_note": "Biến thể EMPTY của dashboard.json — shop vừa onboarding xong, chưa có hoạt động nào. Cùng shape với dashboard.json để DashboardScreen nhận qua prop `data`. Dùng ở route /dashboard/new-user-state để minh hoạ empty state.",
+  "todo": {
+    "handoff": 0,
+    "bigOrders": 0,
+    "payments": 0
+  },
+  "dailyReport": {
+    "date": "2026-06-10",
+    "newChats": 0,
+    "newCustomers": 0,
+    "pendingOrders": 0,
+    "revenue": 0
+  },
+  "notableConversations": [],
+  "kpis": [
+    { "key": "chats", "label": "Hội thoại hôm nay", "value": 0, "deltaPct": 0 },
+    { "key": "new_customers", "label": "Khách mới", "value": 0, "deltaPct": 0 },
+    { "key": "closed_orders", "label": "Đơn đã chốt", "value": 0, "deltaPct": 0 },
+    { "key": "revenue", "label": "Doanh thu", "value": 0, "deltaPct": 0 }
+  ],
+  "hourlyVolume": [],
+  "intentBreakdown": [],
+  "topProducts": [],
+  "learnedToday": 0,
+  "comparison": {
+    "responseTime": { "withAgent": "—", "manual": "—" },
+    "parallelCustomers": { "withAgent": 0, "manual": 0 },
+    "missedOrders": { "withAgent": 0, "manual": 0 },
+    "hoursSaved": 0
+  }
+}

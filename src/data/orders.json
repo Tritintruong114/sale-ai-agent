@@ -1,0 +1,185 @@
+{
+  "_note": "M2 Quản lý đơn — trục trạng thái Mới→Đang xử lý→Hoàn tất (M2.1). approval suy từ total vs autoCloseThreshold=300.000đ (config.ts): dưới→auto (Agent đã chốt), trên→pending (Chờ chủ shop xác nhận) (M2.2). conversationId trỏ về conversations.json (X1). Đúng 2 đơn approval=pending khớp PENDING_COUNTS.bigOrders=2. items.productId trỏ catalog products.json (trái cây + mâm cúng + giỏ quà) để cross-link Sản phẩm↔Đơn↔Hội thoại chạy. Trường mở rộng: channel, paymentStatus, address, note, timeline[] (mốc trạng thái, tone theo hệ màu §5 design.md).",
+  "orders": [
+    {
+      "id": "o-001",
+      "conversationId": "c-001",
+      "customerName": "Nguyễn Thị Hà",
+      "channel": "facebook",
+      "status": "done",
+      "deliveryStatus": "delivered",
+      "paymentStatus": "paid",
+      "total": 250000,
+      "approval": "auto",
+      "address": "12 Nguyễn Trãi, Thanh Xuân, Hà Nội",
+      "note": null,
+      "items": [
+        { "productId": "fr-sau-rieng-musanking", "name": "Sầu riêng Musanking", "qty": 1, "price": 120000 },
+        { "productId": "fr-nho-queen", "name": "Nho Queen", "qty": 1, "price": 85000 },
+        { "productId": "fr-chom-chom", "name": "Chôm Chôm", "qty": 1, "price": 45000 }
+      ],
+      "createdAt": "2026-06-09T08:15:00+07:00",
+      "timeline": [
+        { "at": "2026-06-09T08:15:00+07:00", "label": "Agent tạo đơn", "tone": "sky" },
+        { "at": "2026-06-09T08:40:00+07:00", "label": "Đã thanh toán", "tone": "emerald" },
+        { "at": "2026-06-09T11:20:00+07:00", "label": "Đang đóng gói", "tone": "indigo" },
+        { "at": "2026-06-09T16:05:00+07:00", "label": "Đã giao hàng", "tone": "emerald" }
+      ]
+    },
+    {
+      "id": "o-002",
+      "conversationId": "c-002",
+      "customerName": "Trần Minh Anh",
+      "channel": "facebook",
+      "status": "new",
+      "deliveryStatus": "pending",
+      "paymentStatus": "awaiting",
+      "total": 640000,
+      "approval": "pending",
+      "address": "45 Lê Lợi, Hải Châu, Đà Nẵng",
+      "note": "Khách hỏi giao trước cuối tuần.",
+      "items": [
+        { "productId": "gio-gio-tinh-khoi", "name": "Giỏ Tinh Khôi", "qty": 1, "price": 550000 },
+        { "productId": "fr-xoai", "name": "Xoài", "qty": 1, "price": 90000 }
+      ],
+      "createdAt": "2026-06-09T09:42:00+07:00",
+      "timeline": [
+        { "at": "2026-06-09T09:42:00+07:00", "label": "Agent tạo đơn", "tone": "sky" },
+        { "at": "2026-06-09T09:42:00+07:00", "label": "Đơn vượt ngưỡng — chờ bạn duyệt", "tone": "amber" }
+      ]
+    },
+    {
+      "id": "o-003",
+      "conversationId": "c-006",
+      "customerName": "Đỗ Gia Hân",
+      "channel": "zalo",
+      "status": "processing",
+      "deliveryStatus": "packing",
+      "paymentStatus": "paid",
+      "total": 180000,
+      "approval": "auto",
+      "address": "88 Trần Hưng Đạo, Quận 1, TP.HCM",
+      "note": null,
+      "items": [
+        { "productId": "fr-sau-rieng-musanking", "name": "Sầu riêng Musanking", "qty": 1, "price": 120000 },
+        { "productId": "fr-cam-vang", "name": "Cam Vàng", "qty": 2, "price": 30000 }
+      ],
+      "createdAt": "2026-06-09T07:32:00+07:00",
+      "timeline": [
+        { "at": "2026-06-09T07:32:00+07:00", "label": "Agent tạo đơn", "tone": "sky" },
+        { "at": "2026-06-09T08:10:00+07:00", "label": "Đã thanh toán", "tone": "emerald" },
+        { "at": "2026-06-09T10:30:00+07:00", "label": "Đang đóng gói", "tone": "indigo" }
+      ]
+    },
+    {
+      "id": "o-004",
+      "conversationId": "c-004",
+      "customerName": "Phạm Quốc Bảo",
+      "channel": "facebook",
+      "status": "new",
+      "deliveryStatus": "pending",
+      "paymentStatus": "awaiting",
+      "total": 1060000,
+      "approval": "pending",
+      "address": "27 Phan Đình Phùng, Ba Đình, Hà Nội",
+      "note": "Đơn sỉ — khách mua lại lần 2.",
+      "items": [
+        { "productId": "fr-sau-rieng-musanking", "name": "Sầu riêng Musanking", "qty": 6, "price": 120000 },
+        { "productId": "fr-nho-queen", "name": "Nho Queen", "qty": 4, "price": 85000 }
+      ],
+      "createdAt": "2026-06-09T10:03:00+07:00",
+      "timeline": [
+        { "at": "2026-06-09T10:03:00+07:00", "label": "Agent tạo đơn", "tone": "sky" },
+        { "at": "2026-06-09T10:03:00+07:00", "label": "Đơn vượt ngưỡng — chờ bạn duyệt", "tone": "amber" }
+      ]
+    },
+    {
+      "id": "o-005",
+      "conversationId": "c-003",
+      "customerName": "Lê Thu Trang",
+      "channel": "zalo",
+      "status": "processing",
+      "deliveryStatus": "packing",
+      "paymentStatus": "paid",
+      "total": 450000,
+      "approval": "confirmed",
+      "address": "9 Hùng Vương, Huế, Thừa Thiên Huế",
+      "note": null,
+      "items": [
+        { "productId": "mam-mam-thanh-tan", "name": "Mâm thanh tân", "qty": 1, "price": 450000 }
+      ],
+      "createdAt": "2026-06-09T06:58:00+07:00",
+      "timeline": [
+        { "at": "2026-06-09T06:58:00+07:00", "label": "Agent tạo đơn", "tone": "sky" },
+        { "at": "2026-06-09T07:25:00+07:00", "label": "Bạn đã duyệt đơn", "tone": "sky" },
+        { "at": "2026-06-09T08:05:00+07:00", "label": "Đã thanh toán", "tone": "emerald" },
+        { "at": "2026-06-09T09:40:00+07:00", "label": "Đang đóng gói", "tone": "indigo" }
+      ]
+    },
+    {
+      "id": "o-006",
+      "conversationId": "c-005",
+      "customerName": "Vũ Đức Khải",
+      "channel": "facebook",
+      "status": "done",
+      "deliveryStatus": "delivered",
+      "paymentStatus": "paid",
+      "total": 90000,
+      "approval": "auto",
+      "address": "150 Cách Mạng Tháng 8, Quận 3, TP.HCM",
+      "note": null,
+      "items": [
+        { "productId": "fr-bo", "name": "Bơ", "qty": 2, "price": 45000 }
+      ],
+      "createdAt": "2026-06-08T19:12:00+07:00",
+      "timeline": [
+        { "at": "2026-06-08T19:12:00+07:00", "label": "Agent tạo đơn", "tone": "sky" },
+        { "at": "2026-06-08T19:30:00+07:00", "label": "Đã thanh toán", "tone": "emerald" },
+        { "at": "2026-06-09T09:00:00+07:00", "label": "Đã giao hàng", "tone": "emerald" }
+      ]
+    },
+    {
+      "id": "o-007",
+      "conversationId": "c-007",
+      "customerName": "Hoàng Mỹ Linh",
+      "channel": "zalo",
+      "status": "new",
+      "deliveryStatus": "pending",
+      "paymentStatus": "awaiting",
+      "total": 235000,
+      "approval": "auto",
+      "address": "3 Nguyễn Huệ, Quận 1, TP.HCM",
+      "note": null,
+      "items": [
+        { "productId": "fr-sau-rieng-musanking", "name": "Sầu riêng Musanking", "qty": 1, "price": 120000 },
+        { "productId": "fr-nho-queen", "name": "Nho Queen", "qty": 1, "price": 85000 },
+        { "productId": "fr-cam-vang", "name": "Cam Vàng", "qty": 1, "price": 30000 }
+      ],
+      "createdAt": "2026-06-09T10:48:00+07:00",
+      "timeline": [
+        { "at": "2026-06-09T10:48:00+07:00", "label": "Agent tạo đơn", "tone": "sky" }
+      ]
+    },
+    {
+      "id": "o-008",
+      "conversationId": "c-008",
+      "customerName": "Bùi Thanh Tùng",
+      "channel": "facebook",
+      "status": "new",
+      "deliveryStatus": "pending",
+      "paymentStatus": "awaiting",
+      "total": 790000,
+      "approval": "rejected",
+      "address": "72 Lý Thường Kiệt, Hoàn Kiếm, Hà Nội",
+      "note": "Khách nghi ngờ giá mâm — đã từ chối, chờ tư vấn lại.",
+      "items": [
+        { "productId": "mam-mam-vang-son", "name": "Mâm Vàng Son", "qty": 1, "price": 790000 }
+      ],
+      "createdAt": "2026-06-09T09:05:00+07:00",
+      "timeline": [
+        { "at": "2026-06-09T09:05:00+07:00", "label": "Agent tạo đơn", "tone": "sky" },
+        { "at": "2026-06-09T09:20:00+07:00", "label": "Bạn đã từ chối đơn", "tone": "rose" }
+      ]
+    }
+  ]
+}

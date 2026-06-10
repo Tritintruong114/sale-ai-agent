@@ -1,0 +1,93 @@
+{
+  "_note": "M5 Thanh toán (HITL). orderId trỏ orders.json (channel/createdAt join từ đó để bảng + cross-link chạy). status ∈ awaiting|paid. needsApproval=true cho đơn lớn/hoàn tiền cần chủ shop duyệt trước khi agent gửi QR — đúng 1 mục khớp PENDING_COUNTS.payments=1. Không có bước tạo link: duyệt xong (hoặc không cần duyệt) → trạng thái 'Đã gửi QR', chờ khách trả → 'Đã thanh toán'.",
+  "queue": [
+    {
+      "id": "pay-001",
+      "orderId": "o-002",
+      "customerName": "Trần Minh Anh",
+      "channel": "facebook",
+      "amount": 640000,
+      "status": "awaiting",
+      "needsApproval": true,
+      "reason": "Đơn lớn vượt ngưỡng tự chốt — cần chủ shop duyệt trước khi gửi QR",
+      "createdAt": "2026-06-09T09:42:00+07:00"
+    },
+    {
+      "id": "pay-002",
+      "orderId": "o-004",
+      "customerName": "Phạm Quốc Bảo",
+      "channel": "facebook",
+      "amount": 1060000,
+      "status": "awaiting",
+      "needsApproval": false,
+      "reason": null,
+      "createdAt": "2026-06-09T10:03:00+07:00"
+    },
+    {
+      "id": "pay-003",
+      "orderId": "o-007",
+      "customerName": "Hoàng Mỹ Linh",
+      "channel": "zalo",
+      "amount": 235000,
+      "status": "awaiting",
+      "needsApproval": false,
+      "reason": null,
+      "createdAt": "2026-06-09T10:48:00+07:00"
+    },
+    {
+      "id": "pay-004",
+      "orderId": "o-008",
+      "customerName": "Bùi Thanh Tùng",
+      "channel": "facebook",
+      "amount": 790000,
+      "status": "awaiting",
+      "needsApproval": false,
+      "reason": null,
+      "createdAt": "2026-06-09T09:05:00+07:00"
+    },
+    {
+      "id": "pay-005",
+      "orderId": "o-001",
+      "customerName": "Nguyễn Thị Hà",
+      "channel": "facebook",
+      "amount": 250000,
+      "status": "paid",
+      "needsApproval": false,
+      "reason": null,
+      "createdAt": "2026-06-09T08:15:00+07:00"
+    },
+    {
+      "id": "pay-006",
+      "orderId": "o-003",
+      "customerName": "Đỗ Gia Hân",
+      "channel": "zalo",
+      "amount": 180000,
+      "status": "paid",
+      "needsApproval": false,
+      "reason": null,
+      "createdAt": "2026-06-09T07:32:00+07:00"
+    },
+    {
+      "id": "pay-007",
+      "orderId": "o-005",
+      "customerName": "Lê Thu Trang",
+      "channel": "zalo",
+      "amount": 450000,
+      "status": "paid",
+      "needsApproval": false,
+      "reason": null,
+      "createdAt": "2026-06-09T06:58:00+07:00"
+    },
+    {
+      "id": "pay-008",
+      "orderId": "o-006",
+      "customerName": "Vũ Đức Khải",
+      "channel": "facebook",
+      "amount": 90000,
+      "status": "paid",
+      "needsApproval": false,
+      "reason": null,
+      "createdAt": "2026-06-08T19:12:00+07:00"
+    }
+  ]
+}

@@ -1,0 +1,410 @@
+{
+  "_note": "M3 Sản phẩm — danh mục cửa hàng trái cây (nguồn: Google Sheet). catalog: DraftProduct + stock/lowStock (sắp hết <=8, hết =0). rawSamples: đầu vào thô agent gom từ caption → extracted để duyệt.",
+  "rawSamples": [
+    {
+      "id": "raw-001",
+      "rawText": "Sầu riêng Musanking 120k/kg, giống cao cấp Malaysia, cơm vàng dẻo béo, hạt lép. Hàng mới về.",
+      "extracted": {
+        "id": "fr-sau-rieng-musanking",
+        "name": "Sầu riêng Musanking",
+        "price": 120000,
+        "description": "Cơm vàng đậm, dẻo, béo ngậy, hạt lép.",
+        "imageHint": "Ảnh sầu riêng nền trắng"
+      }
+    },
+    {
+      "id": "raw-002",
+      "rawText": "mới nhập nho Queen 85k/kg, nho đỏ không hạt quả to giòn ngọt đậm, ăn vặt tiện",
+      "extracted": {
+        "id": "fr-nho-queen",
+        "name": "Nho Queen",
+        "price": 85000,
+        "description": "Nho đỏ không hạt, quả to, giòn, ngọt đậm.",
+        "imageHint": "Ảnh từ album mới"
+      }
+    }
+  ],
+  "catalog": [
+    {
+      "id": "fr-sau-rieng-musanking",
+      "name": "Sầu riêng Musanking",
+      "price": 120000,
+      "description": "Giống cao cấp từ Malaysia, cơm vàng đậm, dẻo, vị béo ngậy pha chút đắng nhẹ đặc trưng. Hạt lép",
+      "imageUrl": "https://drive.google.com/thumbnail?id=1Vu3vteuD8CiHhGSFAolt2BftibUlep1w&sz=w1000",
+      "images": [
+        "https://drive.google.com/thumbnail?id=1Vu3vteuD8CiHhGSFAolt2BftibUlep1w&sz=w1000",
+        "https://drive.google.com/thumbnail?id=1XyWLZmNJs2psihdKdXecDgrv3036fLFz&sz=w1000",
+        "https://drive.google.com/thumbnail?id=1dP6DlxbJuot51WUYvqFkritHGMnxmfZu&sz=w1000",
+        "https://drive.google.com/thumbnail?id=1jKVMJuwBDyow3_9TymCUdnD9IkqQLHKd&sz=w1000"
+      ],
+      "imageHint": "Ảnh Sầu riêng Musanking",
+      "stock": 12,
+      "lowStock": true
+    },
+    {
+      "id": "fr-bo",
+      "name": "Bơ",
+      "price": 45000,
+      "description": "thịt vàng béo, mềm mịn, vị bùi. Ăn dầm sữa, sinh tố hay không đường đều hợp",
+      "imageUrl": "https://drive.google.com/thumbnail?id=1KgEGUg_rWINeLOuDTD61e62m22hchIUF&sz=w1000",
+      "images": [
+        "https://drive.google.com/thumbnail?id=1KgEGUg_rWINeLOuDTD61e62m22hchIUF&sz=w1000",
+        "https://drive.google.com/thumbnail?id=1OS133v_sA8SQHNpsGHXj-ALH9TkYdJ0T&sz=w1000",
+        "https://drive.google.com/thumbnail?id=1OT_GDuWqpzNYwmpbSn13RzhyHIbeNrhc&sz=w1000",
+        "https://drive.google.com/thumbnail?id=1cgxzX53-O72_T4WHHyHSoHQeUcyo-3PZ&sz=w1000"
+      ],
+      "imageHint": "Ảnh Bơ",
+      "stock": 40,
+      "lowStock": false
+    },
+    {
+      "id": "fr-cam-vang",
+      "name": "Cam Vàng",
+      "price": 30000,
+      "description": "vỏ vàng cam, mọng nước, vị ngọt thanh hơi chua, nhiều vitamin C",
+      "imageUrl": "https://drive.google.com/thumbnail?id=1XCnxH4XnLXEyNRm5S-PQj5MU0FXG68z5&sz=w1000",
+      "images": [
+        "https://drive.google.com/thumbnail?id=1XCnxH4XnLXEyNRm5S-PQj5MU0FXG68z5&sz=w1000",
+        "https://drive.google.com/thumbnail?id=1c2EwpwcvrnS0-zAB65OalnHpda32lmrS&sz=w1000",
+        "https://drive.google.com/thumbnail?id=1v_QR8HDG-R_pwi9aOzsAI5i9pUj-mScT&sz=w1000",
+        "https://drive.google.com/thumbnail?id=1bqh0GO5h4j0nypdRfT_uXwYS8LkPCGYX&sz=w1000",
+        "https://drive.google.com/thumbnail?id=1GgO0lX2wSvYZNvOjLPSiaJwQPrionzb8&sz=w1000"
+      ],
+      "imageHint": "Ảnh Cam Vàng",
+      "stock": 60,
+      "lowStock": false
+    },
+    {
+      "id": "fr-nho-queen",
+      "name": "Nho Queen",
+      "price": 85000,
+      "description": "nho đỏ không hạt, quả to, giòn, ngọt đậm, ăn vặt rất tiện.",
+      "imageUrl": "https://drive.google.com/thumbnail?id=1kJviRnG87fATcWA2Di4pythYYARBNNKc&sz=w1000",
+      "images": [
+        "https://drive.google.com/thumbnail?id=1kJviRnG87fATcWA2Di4pythYYARBNNKc&sz=w1000",
+        "https://drive.google.com/thumbnail?id=1Yl5CXgcKD4i2DNuhJ58QWRiZEjpN1BZe&sz=w1000",
+        "https://drive.google.com/thumbnail?id=1uy5wgmYiQPSAfKq7-TwYolWUglxyxy4_&sz=w1000"
+      ],
+      "imageHint": "Ảnh Nho Queen",
+      "stock": 18,
+      "lowStock": false
+    },
+    {
+      "id": "fr-bon-bon",
+      "name": "Bòn bon",
+      "price": 55000,
+      "description": "Vị chua ngọt hài hòa, múi mọng, thơm mát",
+      "imageUrl": "https://drive.google.com/thumbnail?id=1rmbU5KBseRzZ9hmfjPyNbPTkJ81CBqC9&sz=w1000",
+      "images": [
+        "https://drive.google.com/thumbnail?id=1rmbU5KBseRzZ9hmfjPyNbPTkJ81CBqC9&sz=w1000",
+        "https://drive.google.com/thumbnail?id=1VQ5P6IPJQMf-zeuaRfuEQxL1Pb8i_dg3&sz=w1000",
+        "https://drive.google.com/thumbnail?id=1hR1ZArIfv94KtD6056SwtG-aTj5uwclW&sz=w1000",
+        "https://drive.google.com/thumbnail?id=181ctWLN2hH3o3zvIreKavGItQuIS8E6z&sz=w1000",
+        "https://drive.google.com/thumbnail?id=1sFW9EaCg3MLFnmDhUI6qIphYpfYebmzM&sz=w1000"
+      ],
+      "imageHint": "Ảnh Bòn bon",
+      "stock": 25,
+      "lowStock": false
+    },
+    {
+      "id": "fr-xoai",
+      "name": "Xoài",
+      "price": 90000,
+      "description": "Chua ngọt dịu, thanh, thịt vàng, ngọt thơm",
+      "imageUrl": "https://drive.google.com/thumbnail?id=1s5wvh-H0cOMmUOJ4sVLy5Bj_ENabuXRp&sz=w1000",
+      "images": [
+        "https://drive.google.com/thumbnail?id=1s5wvh-H0cOMmUOJ4sVLy5Bj_ENabuXRp&sz=w1000",
+        "https://drive.google.com/thumbnail?id=1tpAhH3wO1bq7ACZBAiPSHOXBdsak5oy9&sz=w1000"
+      ],
+      "imageHint": "Ảnh Xoài",
+      "stock": 30,
+      "lowStock": false
+    },
+    {
+      "id": "fr-chuoi",
+      "name": "Chuối",
+      "price": 20000,
+      "description": "ngọt, thơm, dẻo",
+      "imageUrl": "https://drive.google.com/thumbnail?id=1e2h1Y1da42Z3Q2beDy6nBH3OSthJHykg&sz=w1000",
+      "images": [
+        "https://drive.google.com/thumbnail?id=1e2h1Y1da42Z3Q2beDy6nBH3OSthJHykg&sz=w1000",
+        "https://drive.google.com/thumbnail?id=1jbrhI--NHWO0uW1m405A4PIbfbnqFBiA&sz=w1000"
+      ],
+      "imageHint": "Ảnh Chuối",
+      "stock": 0,
+      "lowStock": false
+    },
+    {
+      "id": "fr-vai-thieu-luc-ngan",
+      "name": "Vải thiều Lục Ngan",
+      "price": 85000,
+      "description": "Vị ngọt đậm, thơm Mùa hè là chính vụ, nổi tiếng nhất là vải thiều Lục Ngạn (Bắc Giang).",
+      "imageUrl": "https://drive.google.com/thumbnail?id=11I6_8Rw-FHEAy4qcT8Ik3lhWgxyoVmXc&sz=w1000",
+      "images": [
+        "https://drive.google.com/thumbnail?id=11I6_8Rw-FHEAy4qcT8Ik3lhWgxyoVmXc&sz=w1000",
+        "https://drive.google.com/thumbnail?id=17uuvam4oNLgGmV2Vf6ldm8L0u12D3Fdr&sz=w1000",
+        "https://drive.google.com/thumbnail?id=1bM5_qcPbX7ugoo5ryorgLdMAEpzKosPI&sz=w1000",
+        "https://drive.google.com/thumbnail?id=1f555JTfnssgLZJcTubrmXUBsPEsfdoU5&sz=w1000"
+      ],
+      "imageHint": "Ảnh Vải thiều Lục Ngan",
+      "stock": 6,
+      "lowStock": true
+    },
+    {
+      "id": "fr-mang-cut",
+      "name": "Măng Cụt",
+      "price": 75000,
+      "description": "Vị chua ngọt thanh mát rất đặc trưng",
+      "imageUrl": "https://drive.google.com/thumbnail?id=1UMeh4eLoc44zMH4SHkTXmW2o9nzt7qIa&sz=w1000",
+      "images": [
+        "https://drive.google.com/thumbnail?id=1UMeh4eLoc44zMH4SHkTXmW2o9nzt7qIa&sz=w1000",
+        "https://drive.google.com/thumbnail?id=1YoQHzjnkMIC2LailwimnuEv2rRAzIeL0&sz=w1000",
+        "https://drive.google.com/thumbnail?id=1KkSB3wzX-Cib0RWIL1Ai7hWcXKM6yh9e&sz=w1000",
+        "https://drive.google.com/thumbnail?id=1NpLhtYV4NlH1L-YiuFk6jaHZH3j6SwVG&sz=w1000",
+        "https://drive.google.com/thumbnail?id=1LapFnWln8m1UPc2OOe_wyeDdVxN3V_ni&sz=w1000"
+      ],
+      "imageHint": "Ảnh Măng Cụt",
+      "stock": 15,
+      "lowStock": false
+    },
+    {
+      "id": "fr-chom-chom",
+      "name": "Chôm Chôm",
+      "price": 45000,
+      "description": "thịt trắng trong, giòn, ngọt mát Mùa hè rộ",
+      "imageUrl": "https://drive.google.com/thumbnail?id=1va-qYWGZ4peOFCl1F374HdBsGZwUu0oQ&sz=w1000",
+      "images": [
+        "https://drive.google.com/thumbnail?id=1va-qYWGZ4peOFCl1F374HdBsGZwUu0oQ&sz=w1000",
+        "https://drive.google.com/thumbnail?id=1I6-KTfAM2rFyh61mjer5kuL5W9w2PjQL&sz=w1000",
+        "https://drive.google.com/thumbnail?id=18B47Kml1oJyrz6IwvbrVhfWrG6ddE0-P&sz=w1000",
+        "https://drive.google.com/thumbnail?id=1ohpiqH677rTu3ju7fPENWM7est4nH8Iy&sz=w1000"
+      ],
+      "imageHint": "Ảnh Chôm Chôm",
+      "stock": 22,
+      "lowStock": false
+    },
+    {
+      "id": "mam-mam-loc-sen",
+      "name": "Mâm lộc sen",
+      "price": 600000,
+      "description": "Mâm sang trọng, điểm hoa sen trắng trang nhã, tông lá xanh đầy đặn Trái cây: nho mẫu đơn, táo đỏ, cam vàng, lê Queen VIP, thanh long, trang trí lá trầu + hoa sen trắng. Dùng dịp: dâng lễ chùa, cúng Phật, lễ tạ, hoặc biếu tặng cao cấp (sếp, đối tác). Đặt trước: 1 hoặc 2 ngày (hoa sen + lê VIP cần đặt hàng riêng).",
+      "imageUrl": "https://drive.google.com/thumbnail?id=1Y7_ja2l4UF1d_ZilatM0Gh6HGoMujoYq&sz=w1000",
+      "images": [
+        "https://drive.google.com/thumbnail?id=1Y7_ja2l4UF1d_ZilatM0Gh6HGoMujoYq&sz=w1000"
+      ],
+      "imageHint": "Ảnh Mâm lộc sen",
+      "stock": 10,
+      "lowStock": false
+    },
+    {
+      "id": "mam-mam-ca-chep-hoa-rong",
+      "name": "Mâm cá chép hoá rồng",
+      "price": 900000,
+      "description": "Điểm nhấn là quả dưa hấu khắc cá chép vàng, ý nghĩa \"cá chép hóa rồng, phát đạt\". Trái cây: dưa hấu khắc chữ, phật thủ, đu đủ, cam – quýt – quất, thanh long, táo, hoa cúc trắng. Dùng dịp: cúng khai trương, mở hàng, động thổ, hội nghị. Đặt trước: 1–2 ngày (phần khắc dưa cần thợ làm trước).",
+      "imageUrl": "https://drive.google.com/thumbnail?id=15iTdlNDd5-GQa08wznP5ZUIgtSNFwb46&sz=w1000",
+      "images": [
+        "https://drive.google.com/thumbnail?id=15iTdlNDd5-GQa08wznP5ZUIgtSNFwb46&sz=w1000"
+      ],
+      "imageHint": "Ảnh Mâm cá chép hoá rồng",
+      "stock": 8,
+      "lowStock": false
+    },
+    {
+      "id": "mam-mam-thanh-tan",
+      "name": "Mâm thanh tân",
+      "price": 450000,
+      "description": "Tông xanh và trắng tinh khôi, nhẹ nhàng, hiện đại Trái cây: dưa lưới, táo xanh, nho xanh, chanh vàng, hoa lay ơn trắng. Dùng dịp: khai trương, tân gia, biếu tặng nhẹ nhàng, cúng rằm – mùng 1. Đặt trước: trong ngày đến 1 ngày",
+      "imageUrl": "https://drive.google.com/thumbnail?id=1DcLUNPxvecyOwnH6T7N_KJA-PEsAuvxw&sz=w1000",
+      "images": [
+        "https://drive.google.com/thumbnail?id=1DcLUNPxvecyOwnH6T7N_KJA-PEsAuvxw&sz=w1000"
+      ],
+      "imageHint": "Ảnh Mâm thanh tân",
+      "stock": 12,
+      "lowStock": false
+    },
+    {
+      "id": "mam-mam-ngu-qua-gia-tien",
+      "name": "Mâm ngũ quả gia tiên",
+      "price": 500000,
+      "description": "Mâm kiểu truyền thống miền Bắc: nải chuối ôm phật thủ ở giữa, điểm ớt đỏ cho may mắn. Trái cây: phật thủ, nải chuối xanh, cam, quýt, táo, thanh long, ớt đỏ. Dùng dịp: cúng gia tiên, giỗ, Tết, rằm tháng Giêng / tháng Bảy. Đặt trước: trong ngày đến 1 ngày",
+      "imageUrl": "https://drive.google.com/thumbnail?id=1HhTcHaPX7RfMxdpUJzigkrvALCeab493&sz=w1000",
+      "images": [
+        "https://drive.google.com/thumbnail?id=1HhTcHaPX7RfMxdpUJzigkrvALCeab493&sz=w1000"
+      ],
+      "imageHint": "Ảnh Mâm ngũ quả gia tiên",
+      "stock": 10,
+      "lowStock": false
+    },
+    {
+      "id": "mam-mam-ram-thang-7",
+      "name": "Mâm rằm tháng 7",
+      "price": 1500000,
+      "description": "Hoa & trang trí Hoa sen hồng: 1 bó (~10 bông) Quả Phật thủ vàng: 1–2 trái Lá xanh, lá dứa trang trí: 1 phần Mâm ngũ quả Dưa lưới: 1 quả Táo (xanh + đỏ): ~0.5kg Cam/quýt: ~0.5kg Chuối: 1 nải Quả nhỏ (roi/mận, ổi): ~0.5kg Món mặn Gà luộc nguyên con: 1 con (~1.5–1.8kg) Tôm luộc/hấp: ~1kg (15–20 con) Canh (canh bóng/măng): 1 nồi lớn (10–12 chén) Món kho hoặc nướng (cá/thịt): 1 đĩa lớn Món ngọt – bánh – chè Chè hạt sen: 10–12 chén Bánh tạo hình hoa sen: 1 set 10–12 cái Xôi: 1 mâm lớn (~1.5kg)",
+      "imageUrl": "https://drive.google.com/thumbnail?id=1EbNz_pWw7uLg87i81AugR8d5y5fFNH2J&sz=w1000",
+      "images": [
+        "https://drive.google.com/thumbnail?id=1EbNz_pWw7uLg87i81AugR8d5y5fFNH2J&sz=w1000"
+      ],
+      "imageHint": "Ảnh Mâm rằm tháng 7",
+      "stock": 4,
+      "lowStock": true
+    },
+    {
+      "id": "mam-mam-vang-son",
+      "name": "Mâm Vàng Son",
+      "price": 790000,
+      "description": "Điểm đặc sắc: Tháp xoài chín vàng xếp tầng đầy đặn, điểm hoa huệ ta và hồng trắng vươn cao tạo dáng bề thế, trang nghiêm. Màu vàng tượng trưng cho tài lộc, sung túc. Dịp phù hợp: Khai trương, mừng tân gia, biếu sếp/đối tác, hoặc dâng lễ trang trọng.",
+      "imageUrl": "https://drive.google.com/thumbnail?id=1iEB14i3yOvsmX7cDIuDnPX9z453knm9U&sz=w1000",
+      "images": [
+        "https://drive.google.com/thumbnail?id=1iEB14i3yOvsmX7cDIuDnPX9z453knm9U&sz=w1000",
+        "https://drive.google.com/thumbnail?id=186bJsTPnOtZOlvm6Zsw0thbKkJLbKMcj&sz=w1000",
+        "https://drive.google.com/thumbnail?id=1vgQYGJwl7kWfTdr3TSWa7f2p-HcI4rZd&sz=w1000"
+      ],
+      "imageHint": "Ảnh Mâm Vàng Son",
+      "stock": 8,
+      "lowStock": false
+    },
+    {
+      "id": "mam-mam-tam-an-cat-tuong",
+      "name": "Mâm Tâm An Cát Tường",
+      "price": 890000,
+      "description": "Điểm đặc sắc: Mâm trang nghiêm và đầy đủ nhất – có phật thủ (cầu Phật phù hộ), sen hồng, sen trắng, thanh long, bưởi vàng, chuối xanh, quýt, xoài, điểm thêm hoa bưởi thơm dịu Ngũ sắc – ngũ quả hài hòa, ý nghĩa cầu bình an, may mắn Dịp phù hợp: Cúng rằm, mùng 1, dâng chùa, lễ Phật, cúng gia tiên – đặc biệt dịp Vu Lan, Tết.",
+      "imageUrl": "https://drive.google.com/thumbnail?id=1wztR6PCSyQSf2PutRhNMBZ8csNcAtJ08&sz=w1000",
+      "images": [
+        "https://drive.google.com/thumbnail?id=1wztR6PCSyQSf2PutRhNMBZ8csNcAtJ08&sz=w1000"
+      ],
+      "imageHint": "Ảnh Mâm Tâm An Cát Tường",
+      "stock": 10,
+      "lowStock": false
+    },
+    {
+      "id": "mam-mam-an-nhien",
+      "name": "Mâm An Nhiên",
+      "price": 590000,
+      "description": "Điểm đặc sắc: Nhỏ gọn, tinh tế – sen hồng và sen trắng làm điểm nhấn, kết cùng táo, cam, xoài và hoa trắng nhẹ nhàng. Tổng thể thanh thoát, kín đáo, hợp không gian nhỏ. Dịp phù hợp: Cúng rằm/mùng 1 hằng tháng, lễ Phật tại gia, hoặc làm quà tặng thanh nhã.",
+      "imageUrl": "https://drive.google.com/thumbnail?id=1zXbSigQ_5lclVAMZnigplOfNHA6s1F5S&sz=w1000",
+      "images": [
+        "https://drive.google.com/thumbnail?id=1zXbSigQ_5lclVAMZnigplOfNHA6s1F5S&sz=w1000"
+      ],
+      "imageHint": "Ảnh Mâm An Nhiên",
+      "stock": 12,
+      "lowStock": false
+    },
+    {
+      "id": "mam-mam-cat-tuong-nhu-y",
+      "name": "Mâm Cát Tường Như Ý",
+      "price": 790000,
+      "description": "Điểm đặc sắc: Tươi tắn, nhiều màu, sen trắng/hồng nổi trên nền nho xanh mọng, kết hợp táo, cam, bưởi, mãng cầu (cầu), thanh long, đặt trên lá trầu và hoa baby. \"Mãng cầu\" mang ý cầu mong như ý. Dịp phù hợp: Cúng rằm, khai trương, mừng nhà mới, hoặc lễ tạ, muốn mâm tươi sáng, bắt mắt.",
+      "imageUrl": "https://drive.google.com/thumbnail?id=1Y7_ja2l4UF1d_ZilatM0Gh6HGoMujoYq&sz=w1000",
+      "images": [
+        "https://drive.google.com/thumbnail?id=1Y7_ja2l4UF1d_ZilatM0Gh6HGoMujoYq&sz=w1000"
+      ],
+      "imageHint": "Ảnh Mâm Cát Tường Như Ý",
+      "stock": 10,
+      "lowStock": false
+    },
+    {
+      "id": "mam-mam-sen-hong-tinh-tam",
+      "name": "Mâm Sen Hồng Tịnh Tâm",
+      "price": 900000,
+      "description": "Hợp để: Cúng gia tiên ngày Rằm tháng 7 (có món mặn như gà, tôm, chả) Cúng Rằm, Mùng 1 hằng tháng Cúng giỗ, lễ tạ — những dịp cần trang nghiêm mà vẫn đầy đặn Hoa sen là loài hoa nhà Phật nên mâm này nhìn rất \"lễ\", dùng cúng gia tiên trong dịp Vu Lan rất hợp. Mâm cúng tông hồng – xanh lấy hoa sen làm chủ đạo, thanh tịnh và trang nhã. Hoa & trang trí Bình hoa sen hồng lớn hai bên Búp sen xanh tạo hình tháp ở giữa Hoa sen nở điểm trên các đĩa Bộ ấm chén trà sứ hoa lam Hạt sen tươi và sen đá trang trí Trái cây Vải thiều tươi Các loại quả xanh nhỏ Món mặn Gà luộc nguyên con Tôm hấp xếp hình cánh hoa Canh hạt sen (hạt sen, củ sen, cà rốt, nấm) Gỏi cuốn / nem cuốn Chả các loại cắt khoanh Củ sen, rau củ trang trí Món ngọt – chè Chè hạt sen Rau câu tạo hình hoa sen hồng",
+      "imageUrl": "https://drive.google.com/thumbnail?id=1zxGnJgeXQBFa_L3KZeMCFqHflhc8PIZi&sz=w1000",
+      "images": [
+        "https://drive.google.com/thumbnail?id=1zxGnJgeXQBFa_L3KZeMCFqHflhc8PIZi&sz=w1000"
+      ],
+      "imageHint": "Ảnh Mâm Sen Hồng Tịnh Tâm",
+      "stock": 6,
+      "lowStock": true
+    },
+    {
+      "id": "mam-mam-hong-lien-man-khai",
+      "name": "Mâm Hồng Liên Mãn Khai",
+      "price": 900000,
+      "description": "\"Hồng Liên Mãn Khai\" Tông hồng pastel ngọt ngào, hoa lily, bánh kem, tạo hình hoa hồng điệu đà thiên về đẹp mắt, tươi vui hơn là trang nghiêm cổ truyền. Hợp để: Cúng gia tiên dịp Rằm tháng 7 (vẫn đủ gà, cua, tôm, nem) Cúng đầy tháng, thôi nôi, mừng dịp vui trong nhà Mâm lễ tạ, khai trương nơi muốn không khí nhẹ nhàng, sang Mâm cúng tông hồng pastel ngọt ngào, hoa lily và tạo hình hoa hồng tinh tế. Hoa & trang trí Bình hoa lily hồng hai bên Giỏ trái cây kết hoa ở giữa Bánh kem tạo hình hoa Bánh dẻo, rau câu tạo hình hoa hồng Trái cây Nho đen, nho tươi Mận roi đỏ Táo, lê trong giỏ Món mặn Gà luộc nguyên con Cua hấp Tôm chiên, hấp Gỏi cuốn cắt khoanh Chả trứng, chả hoa tỉa hình Nem rán (chả giò) Súp, canh tạo hình hoa hồng Gỏi rau củ Món ngọt, bánh Bánh tạo hình hoa hồng hồng pastel Rau câu, thạch hoa hồng",
+      "imageUrl": "https://drive.google.com/thumbnail?id=1pyqLj_IOdAU-5h2slyeuSNw96nRYenr0&sz=w1000",
+      "images": [
+        "https://drive.google.com/thumbnail?id=1pyqLj_IOdAU-5h2slyeuSNw96nRYenr0&sz=w1000"
+      ],
+      "imageHint": "Ảnh Mâm Hồng Liên Mãn Khai",
+      "stock": 8,
+      "lowStock": false
+    },
+    {
+      "id": "gio-gio-ngot-ngao-phu-quy",
+      "name": "Giỏ Ngọt ngào phú quý",
+      "price": 850000,
+      "description": "Nho mẫu đơn xanh (shine muscat), lê Hàn, cam vàng, táo. Tông màu hồng, cam, xanh ngọc tươi, hoa hồng cam và cẩm chướng hồng, lưới voan kem, nơ hồng. Dịp: thăm hỏi, sinh nhật, mừng khai trương, tặng phái nữ",
+      "imageUrl": "https://drive.google.com/thumbnail?id=1HA-qottSdsS3CzaDAURPrH76gFAE3Ax2&sz=w1000",
+      "images": [
+        "https://drive.google.com/thumbnail?id=1HA-qottSdsS3CzaDAURPrH76gFAE3Ax2&sz=w1000"
+      ],
+      "imageHint": "Ảnh Giỏ Ngọt ngào phú quý",
+      "stock": 10,
+      "lowStock": false
+    },
+    {
+      "id": "gio-gio-vuong-khi-hong-phat",
+      "name": "Giỏ Vượng khí hồng phát",
+      "price": 950000,
+      "description": "nho mẫu đơn xanh, táo Envy đỏ, lê Hàn. Tông đỏ đô, vàng, xanh nổi bật, hoa hồng cam và lan vũ nữ vàng, nơ đỏ. Dịp: mừng thọ, thăm bệnh, lễ Tết, biếu sếp và đối tác",
+      "imageUrl": "https://drive.google.com/thumbnail?id=12qe9anrPp7R1n96L9et29LQynFLYCeAs&sz=w1000",
+      "images": [
+        "https://drive.google.com/thumbnail?id=12qe9anrPp7R1n96L9et29LQynFLYCeAs&sz=w1000"
+      ],
+      "imageHint": "Ảnh Giỏ Vượng khí hồng phát",
+      "stock": 8,
+      "lowStock": false
+    },
+    {
+      "id": "gio-gio-sac-do-phuong-dong",
+      "name": "Giỏ Sắc đỏ phương Đông",
+      "price": 1150000,
+      "description": "lựu đỏ, kiwi, quýt, cam khô lát, hạt dẻ cười Tông đỏ cam ấm, hoa hồng đỏ, cúc cam, lá bạch đàn, quả thông. Phong cách Trung Đông cổ điển sang. Dịp: quà cao cấp, đông chí, lễ truyền thống, tặng người lớn tuổi sếp.",
+      "imageUrl": "https://drive.google.com/thumbnail?id=1qiE5hLU16jqKg2bgjqg0DyC1JKg2Ap_u&sz=w1000",
+      "images": [
+        "https://drive.google.com/thumbnail?id=1qiE5hLU16jqKg2bgjqg0DyC1JKg2Ap_u&sz=w1000"
+      ],
+      "imageHint": "Ảnh Giỏ Sắc đỏ phương Đông",
+      "stock": 6,
+      "lowStock": true
+    },
+    {
+      "id": "gio-gio-tinh-khoi",
+      "name": "Giỏ Tinh Khôi",
+      "price": 550000,
+      "description": "Giỏ nhỏ xinh có nho mẫu đơn xanh. Tông trắng, xanh thanh khiết, hoa hồng trắng, cát tường, cúc mẫu đơn xanh. Dịp: tặng nhẹ nhàng, thăm hỏi, cảm ơn, người yêu thích sự tối giản",
+      "imageUrl": "https://drive.google.com/thumbnail?id=1QDw93MwSSCE1fSdvSl2y6ZCCZK9NwsGR&sz=w1000",
+      "images": [
+        "https://drive.google.com/thumbnail?id=1QDw93MwSSCE1fSdvSl2y6ZCCZK9NwsGR&sz=w1000"
+      ],
+      "imageHint": "Ảnh Giỏ Tinh Khôi",
+      "stock": 12,
+      "lowStock": false
+    },
+    {
+      "id": "gio-diu-dang-pastel",
+      "name": "Dịu dàng pastel",
+      "price": 1250000,
+      "description": "táo Gala/Envy đỏ + hộp quà nhỏ tông hồng pastel, nâu sữa sang trọng, hồng kem, hồng tím, cúc tím, giỏ mây Dịp: sinh nhật, kỷ niệm, tặng phái nữ, decor tinh tế",
+      "imageUrl": "https://drive.google.com/thumbnail?id=1mvYPu5wHs5uZ906KocgmV3VNVHxSHgS3&sz=w1000",
+      "images": [
+        "https://drive.google.com/thumbnail?id=1mvYPu5wHs5uZ906KocgmV3VNVHxSHgS3&sz=w1000"
+      ],
+      "imageHint": "Ảnh Dịu dàng pastel",
+      "stock": 5,
+      "lowStock": true
+    },
+    {
+      "id": "gio-nang-am-an-khang",
+      "name": "Nắng ấm an khang",
+      "price": 800000,
+      "description": "nho xanh, cam, quýt, táo đỏ. Tông cam đỏ rực rỡ ấm áp, hoa hồng đỏ, lan Peru cam, cúc tана, lá bạch đàn, nơ đỏ Dịp: thăm hỏi, chúc sức khỏe, mừng hồi phục, năng lượng tích cực",
+      "imageUrl": "https://drive.google.com/thumbnail?id=1yVzHxa_74NKji_-q3EbNfahrAikl4KkM&sz=w1000",
+      "images": [
+        "https://drive.google.com/thumbnail?id=1yVzHxa_74NKji_-q3EbNfahrAikl4KkM&sz=w1000"
+      ],
+      "imageHint": "Ảnh Nắng ấm an khang",
+      "stock": 8,
+      "lowStock": false
+    }
+  ]
+}

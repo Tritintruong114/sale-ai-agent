@@ -1,0 +1,47 @@
+{
+  "_note": "Prototype hồ sơ khách (panel phải Inbox). Khoá theo conversationId của conversations.json. orderCount/totalSpent suy từ orders.json theo customerName nên không lưu ở đây. firstSeenAt = lần đầu nhắn tin, dùng dựng timeline.",
+  "customers": {
+    "c-001": {
+      "phone": "0901 234 567",
+      "address": "Q. Tân Bình, TP. Hồ Chí Minh",
+      "firstSeenAt": "2025-11-18T20:10:00+07:00",
+      "tags": ["Khách quen"],
+      "note": "Thích trái cây nhập, hay đặt lại sầu riêng và nho."
+    },
+    "c-002": {
+      "phone": "0902 345 678",
+      "address": "Q. 7, TP. Hồ Chí Minh",
+      "firstSeenAt": "2026-03-02T09:30:00+07:00",
+      "tags": ["VIP", "Quà tặng"],
+      "note": "Hay đặt giỏ quà trái cây để biếu. Ưu tiên giao nhanh."
+    },
+    "c-003": {
+      "phone": "0903 456 789",
+      "address": "Q. Hải Châu, Đà Nẵng",
+      "firstSeenAt": "2026-06-09T09:50:00+07:00",
+      "tags": ["Khách mới"],
+      "note": "Đang tìm mâm cúng rằm phù hợp, cần tư vấn thêm."
+    },
+    "c-004": {
+      "phone": "0904 567 890",
+      "address": "Q. Cầu Giấy, Hà Nội",
+      "firstSeenAt": "2026-05-21T14:05:00+07:00",
+      "tags": ["VIP"],
+      "note": "Mua số lượng lớn, thường lấy sỉ nhẹ cho bạn bè."
+    },
+    "c-005": {
+      "phone": "0905 678 901",
+      "address": "TP. Thủ Đức, TP. Hồ Chí Minh",
+      "firstSeenAt": "2026-06-08T19:40:00+07:00",
+      "tags": ["Khách mới"],
+      "note": "Phàn nàn đơn trước giao thiếu vải thiều, chưa xử lý xong."
+    },
+    "c-006": {
+      "phone": "0906 789 012",
+      "address": "Q. Ninh Kiều, Cần Thơ",
+      "firstSeenAt": "2026-04-12T08:15:00+07:00",
+      "tags": ["Khách quen"],
+      "note": "Đã mua trái cây nhiều lần, phản hồi tốt."
+    }
+  }
+}

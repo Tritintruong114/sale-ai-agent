@@ -1,0 +1,101 @@
+{
+  "_note": "M1 Inbox — mock hội thoại. role ∈ customer|agent|system (MessageBubble.tsx); handoff.key ∈ HandoffKey (config.ts); status ∈ new|exploring|quoted|awaiting_payment|closed. 3 hội thoại đang cần người (handoff.acknowledged=false) khớp PENDING_COUNTS.handoff=3. Nội dung bám catalog trái cây + mâm cúng + giỏ quà (products.json); giá/tổng khớp đơn liên kết ở orders.json.",
+  "conversations": [
+    {
+      "id": "c-001",
+      "customerName": "Nguyễn Thị Hà",
+      "channel": "facebook",
+      "status": "closed",
+      "agentActive": false,
+      "handoff": null,
+      "unread": 0,
+      "lastMessageAt": "2026-06-09T08:12:00+07:00",
+      "orderId": "o-001",
+      "messages": [
+        { "id": "m-001-1", "role": "customer", "text": "Sầu riêng Musanking còn hàng không shop?" },
+        { "id": "m-001-2", "role": "agent", "text": "Dạ em chào chị ạ. Sầu riêng Musanking bên em 120.000đ/kg, cơm vàng dẻo, béo ngậy, hạt lép ạ. Hàng mới về còn nhiều ạ." },
+        { "id": "m-001-3", "role": "customer", "text": "Ok cho chị 1kg, thêm ít nho với chôm chôm nữa nhé." },
+        { "id": "m-001-4", "role": "agent", "text": "Dạ em chốt đơn Sầu riêng Musanking, Nho Queen và Chôm Chôm, tổng 250.000đ ạ. Em gửi thông tin giao hàng nhé." }
+      ]
+    },
+    {
+      "id": "c-002",
+      "customerName": "Trần Minh Anh",
+      "channel": "facebook",
+      "status": "awaiting_payment",
+      "agentActive": true,
+      "handoff": { "key": "want_buy", "reason": "Khách muốn mua (dấu hiệu chốt đơn)", "acknowledged": false },
+      "unread": 2,
+      "lastMessageAt": "2026-06-09T09:41:00+07:00",
+      "orderId": "o-002",
+      "messages": [
+        { "id": "m-002-1", "role": "customer", "text": "Cho mình 1 giỏ quà trái cây tặng bạn với ạ" },
+        { "id": "m-002-2", "role": "agent", "text": "Dạ bên em có Giỏ Tinh Khôi 550.000đ, tông trắng xanh thanh khiết ạ. Thêm 1kg Xoài nữa là tổng 640.000đ. Mình lấy combo này nhé?" },
+        { "id": "m-002-3", "role": "customer", "text": "Ừ mình lấy, ship về Quận 7 nha" },
+        { "id": "m-002-4", "role": "system", "text": "Cần người: Khách muốn mua (dấu hiệu chốt đơn) — đơn 640.000đ vượt ngưỡng tự chốt" }
+      ]
+    },
+    {
+      "id": "c-003",
+      "customerName": "Lê Thu Trang",
+      "channel": "facebook",
+      "status": "exploring",
+      "agentActive": true,
+      "handoff": null,
+      "unread": 0,
+      "lastMessageAt": "2026-06-09T09:55:00+07:00",
+      "orderId": null,
+      "messages": [
+        { "id": "m-003-1", "role": "customer", "text": "Shop tư vấn giúp mình mâm cúng rằm với ạ" },
+        { "id": "m-003-2", "role": "agent", "text": "Dạ bên em có Mâm thanh tân 450.000đ tông xanh trắng nhẹ nhàng, hoặc Mâm ngũ quả gia tiên kiểu truyền thống ạ. Chị cúng ở nhà hay cơ quan để em tư vấn mâm cho hợp ạ?" }
+      ]
+    },
+    {
+      "id": "c-004",
+      "customerName": "Phạm Quốc Bảo",
+      "channel": "zalo",
+      "status": "quoted",
+      "agentActive": true,
+      "handoff": { "key": "discount", "reason": "Khách xin giảm giá quá 15%", "acknowledged": false },
+      "unread": 1,
+      "lastMessageAt": "2026-06-09T10:02:00+07:00",
+      "orderId": "o-004",
+      "messages": [
+        { "id": "m-004-1", "role": "customer", "text": "Lấy sỉ sầu riêng với nho, bớt cho mình 20% được không?" },
+        { "id": "m-004-2", "role": "agent", "text": "Dạ mức giảm 20% vượt thẩm quyền của em ạ. Em chuyển chủ shop xác nhận giúp mình nhé." },
+        { "id": "m-004-3", "role": "system", "text": "Cần người: Khách xin giảm giá quá 15%" }
+      ]
+    },
+    {
+      "id": "c-005",
+      "customerName": "Vũ Hồng Nhung",
+      "channel": "facebook",
+      "status": "new",
+      "agentActive": true,
+      "handoff": { "key": "complaint", "reason": "Khách phàn nàn", "acknowledged": false },
+      "unread": 3,
+      "lastMessageAt": "2026-06-09T10:10:00+07:00",
+      "orderId": null,
+      "messages": [
+        { "id": "m-005-1", "role": "customer", "text": "Đơn lần trước giao thiếu mất 1kg vải thiều nhé, shop kiểm tra lại" },
+        { "id": "m-005-2", "role": "agent", "text": "Dạ em rất xin lỗi về sự bất tiện này ạ. Em chuyển chủ shop kiểm tra và phản hồi mình ngay ạ." },
+        { "id": "m-005-3", "role": "system", "text": "Cần người: Khách phàn nàn" }
+      ]
+    },
+    {
+      "id": "c-006",
+      "customerName": "Đỗ Gia Hân",
+      "channel": "facebook",
+      "status": "closed",
+      "agentActive": false,
+      "handoff": null,
+      "unread": 0,
+      "lastMessageAt": "2026-06-09T07:30:00+07:00",
+      "orderId": "o-003",
+      "messages": [
+        { "id": "m-006-1", "role": "customer", "text": "Mua sầu riêng với ít cam nha shop" },
+        { "id": "m-006-2", "role": "agent", "text": "Dạ 1kg Sầu riêng Musanking và 2kg Cam Vàng, tổng 180.000đ ạ. Em chốt đơn cho mình nhé." }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,53 @@
+{
+  "_note": "M4 Dashboard (tab mặc định). todo khớp PENDING_COUNTS (counts.ts). learnedToday = card G2 (số mục nhật ký chờ duyệt ở learning.json). comparison = X2 (có agent vs thủ công). notableConversations trỏ conversations.json.",
+  "todo": {
+    "handoff": 3,
+    "bigOrders": 2,
+    "payments": 1
+  },
+  "dailyReport": {
+    "date": "2026-06-09",
+    "newChats": 38,
+    "newCustomers": 14,
+    "pendingOrders": 2,
+    "revenue": 2210000
+  },
+  "notableConversations": [
+    { "conversationId": "c-002", "customerName": "Trần Minh Anh", "note": "Đơn 640.000đ chờ chủ shop xác nhận" },
+    { "conversationId": "c-005", "customerName": "Vũ Hồng Nhung", "note": "Phàn nàn giao thiếu hàng" },
+    { "conversationId": "c-004", "customerName": "Phạm Quốc Bảo", "note": "Xin giảm giá 20%" }
+  ],
+  "kpis": [
+    { "key": "chats", "label": "Hội thoại hôm nay", "value": 38, "deltaPct": 12 },
+    { "key": "new_customers", "label": "Khách mới", "value": 14, "deltaPct": 8 },
+    { "key": "closed_orders", "label": "Đơn đã chốt", "value": 9, "deltaPct": 20 },
+    { "key": "revenue", "label": "Doanh thu", "value": 2210000, "deltaPct": 15 }
+  ],
+  "hourlyVolume": [
+    { "hour": "08:00", "count": 4 },
+    { "hour": "09:00", "count": 9 },
+    { "hour": "10:00", "count": 12 },
+    { "hour": "11:00", "count": 7 },
+    { "hour": "12:00", "count": 3 },
+    { "hour": "13:00", "count": 3 }
+  ],
+  "intentBreakdown": [
+    { "intent": "Hỏi giá", "count": 16 },
+    { "intent": "Tư vấn sản phẩm", "count": 11 },
+    { "intent": "Chốt đơn", "count": 6 },
+    { "intent": "Khiếu nại", "count": 2 },
+    { "intent": "Khác", "count": 3 }
+  ],
+  "topProducts": [
+    { "productId": "fr-sau-rieng-musanking", "name": "Sầu riêng Musanking", "units": 7, "revenue": 840000 },
+    { "productId": "fr-nho-queen", "name": "Nho Queen", "units": 5, "revenue": 425000 },
+    { "productId": "mam-mam-thanh-tan", "name": "Mâm thanh tân", "units": 1, "revenue": 450000 }
+  ],
+  "learnedToday": 2,
+  "comparison": {
+    "responseTime": { "withAgent": "tức thì", "manual": "~25 phút" },
+    "parallelCustomers": { "withAgent": 6, "manual": 1 },
+    "missedOrders": { "withAgent": 0, "manual": 5 },
+    "hoursSaved": 4.5
+  }
+}

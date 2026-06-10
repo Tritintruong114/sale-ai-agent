@@ -1,0 +1,35 @@
+{
+  "_note": "M6.1 Học hằng ngày (G2). enabled/runAt/sources khớp config.dailyLearning (config.ts) — đây là mock nhật ký + Manager update, KHÔNG phải nguồn sự thật config. journal = nhật ký điều agent học được, duyệt trước khi áp (HITL). 2 mục pending khớp dashboard.learnedToday=2.",
+  "enabled": true,
+  "runAt": "22:00",
+  "sources": [
+    { "key": "closed_today", "label": "Hội thoại đã chốt hôm nay", "enabled": true, "count": 12 },
+    { "key": "owner_edits", "label": "Lần chủ shop sửa câu trả lời", "enabled": true, "count": 3 },
+    { "key": "handoff_done", "label": "Case hand-off đã xử lý", "enabled": true, "count": 5 },
+    { "key": "new_products", "label": "Sản phẩm mới thêm", "enabled": false, "count": 2 }
+  ],
+  "journal": [
+    {
+      "id": "lj-001",
+      "insight": "Khách đặt mâm cúng dịp đặc biệt → hỏi rõ ngày cúng để kịp đặt trước 1–2 ngày.",
+      "source": "handoff_done",
+      "status": "pending"
+    },
+    {
+      "id": "lj-002",
+      "insight": "Giỏ quà trái cây hay bị hỏi giá → thêm giá vào câu chào để rút ngắn hội thoại.",
+      "source": "closed_today",
+      "status": "pending"
+    },
+    {
+      "id": "lj-003",
+      "insight": "Sầu riêng được hỏi nhiều về độ chín → bổ sung ý 'cơm vàng, hạt lép' vào mô tả.",
+      "source": "owner_edits",
+      "status": "approved"
+    }
+  ],
+  "managerUpdates": {
+    "templatesUpdated": 4,
+    "summary": "Agent đã cập nhật 4 mẫu trả lời cho phù hợp hơn."
+  }
+}
