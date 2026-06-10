@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { PanelLeftClose, PanelLeftOpen, RotateCcw } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { Compass, PanelLeftClose, PanelLeftOpen, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUiStore } from "@/store/uiStore";
 import { useAgentConfig } from "@/store/agentConfigStore";
+import { useSetupStore } from "@/store/setupStore";
 import { PrototypeSwitcher } from "./PrototypeSwitcher";
+import { SetupChecklist } from "./SetupChecklist";
 import { PRIMARY_NAV, SETTINGS_NAV, type NavItem } from "./nav";
 
 // §2 design.md — SideNav: điều hướng chính dạng dọc bên trái.
@@ -29,6 +31,7 @@ function NavLink({
     <Link
       href={item.href}
       onClick={onNavigate}
+      data-tour-step-id={item.tour}
       aria-current={active ? "page" : undefined}
       title={collapsed ? item.label : undefined}
       className={cn(
@@ -71,10 +74,13 @@ function NavLink({
 
 export function SideNav() {
   const pathname = usePathname();
+  const router = useRouter();
   const collapsed = useUiStore((s) => s.collapsed);
   const toggleCollapsed = useUiStore((s) => s.toggleCollapsed);
   const mobileOpen = useUiStore((s) => s.mobileOpen);
   const setMobileOpen = useUiStore((s) => s.setMobileOpen);
+  const requestTour = useUiStore((s) => s.requestTour);
+  const resetSetup = useSetupStore((s) => s.reset);
   const pageName = useAgentConfig((s) => s.config.channels.pageName);
 
   const isActive = (href: string) =>
@@ -82,16 +88,23 @@ export function SideNav() {
 
   const closeMobile = () => setMobileOpen(false);
 
+  // Xem lại tour: về Dashboard (bước đầu) rồi đặt cờ để TourLauncher khởi động.
+  const startGuide = () => {
+    closeMobile();
+    router.push("/dashboard");
+    requestTour("guide");
+  };
+
   return (
     <aside
       className={cn(
         "z-50 flex shrink-0 flex-col border-r bg-card",
         // Mobile: drawer cố định trượt vào/ra
-        "fixed inset-y-0 left-0 w-64 transition-transform duration-200 ease-out",
+        "fixed inset-y-0 left-0 w-56 transition-transform duration-200 ease-out",
         mobileOpen ? "translate-x-0" : "-translate-x-full",
         // Desktop: cột tĩnh, không trượt, rộng đổi theo collapsed
         "md:static md:translate-x-0 md:transition-[width]",
-        collapsed ? "md:w-16" : "md:w-64",
+        collapsed ? "md:w-16" : "md:w-56",
       )}
     >
       {/* Thương hiệu + nút thu gọn (icon-only, đưa từ TopBar về đây) */}
@@ -146,12 +159,30 @@ export function SideNav() {
         ))}
       </nav>
 
+      {/* Checklist "Bắt đầu nhanh" — 3 việc để shop chạy được sau Onboarding (tự ẩn khi xong). */}
+      <SetupChecklist />
+
       <div className="space-y-1 border-t p-2">
         {/* Công cụ prototype — chuyển trạng thái dữ liệu demo (đưa từ Dashboard lên đây) */}
         <PrototypeSwitcher />
+        <button
+          type="button"
+          onClick={startGuide}
+          title={collapsed ? "Xem hướng dẫn" : undefined}
+          className={cn(
+            "flex w-full items-center rounded-md text-sm text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground",
+            collapsed ? "justify-center px-0 py-2" : "gap-3 px-3 py-2",
+          )}
+        >
+          <Compass className="size-[18px] shrink-0" />
+          {!collapsed ? <span className="truncate">Xem hướng dẫn</span> : null}
+        </button>
         <Link
           href="/onboarding"
-          onClick={closeMobile}
+          onClick={() => {
+            closeMobile();
+            resetSetup();
+          }}
           title={collapsed ? "Chạy lại Onboarding" : undefined}
           className={cn(
             "flex items-center rounded-md text-sm text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground",

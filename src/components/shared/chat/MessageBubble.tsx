@@ -6,20 +6,53 @@ import type { ChatMessage } from "./types";
 // Re-export để không vỡ các import cũ `import { type ChatMessage } from ".../MessageBubble"`.
 export type { ChatMessage } from "./types";
 
-// Render nhẹ cho reply từ LLM: giữ xuống dòng, đậm **...**, bỏ đường kẻ ---.
+// Render nhẹ cho reply từ LLM: giữ xuống dòng, đậm **...**, ảnh ![alt](url), bỏ đường kẻ ---.
 // Không kéo thư viện markdown — chat bubble chỉ cần bấy nhiêu.
+const IMG_RE = /!\[([^\]]*)\]\(([^)\s]+)\)/g;
+
+// Tách phần chữ thành **đậm** và chữ thường.
+function renderBold(text: string, keyBase: string): ReactNode {
+  return text.split(/(\*\*[^*]+\*\*)/g).map((part, j) =>
+    part.startsWith("**") && part.endsWith("**") ? (
+      <strong key={`${keyBase}-b${j}`}>{part.slice(2, -2)}</strong>
+    ) : (
+      <Fragment key={`${keyBase}-t${j}`}>{part}</Fragment>
+    ),
+  );
+}
+
+// Một dòng: tách ảnh ra render <img>, phần còn lại render chữ/đậm.
+function renderLine(line: string, keyBase: string): ReactNode {
+  const nodes: ReactNode[] = [];
+  let last = 0;
+  let idx = 0;
+  IMG_RE.lastIndex = 0;
+  for (let m = IMG_RE.exec(line); m !== null; m = IMG_RE.exec(line)) {
+    if (m.index > last) nodes.push(renderBold(line.slice(last, m.index), `${keyBase}-${idx}`));
+    nodes.push(
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        key={`${keyBase}-img${idx}`}
+        src={m[2]}
+        alt={m[1] || "Ảnh sản phẩm"}
+        loading="lazy"
+        referrerPolicy="no-referrer"
+        className="mt-1 block max-h-52 w-auto rounded-lg border border-foreground/10"
+      />,
+    );
+    last = m.index + m[0].length;
+    idx += 1;
+  }
+  if (last < line.length) nodes.push(renderBold(line.slice(last), `${keyBase}-${idx}`));
+  return nodes;
+}
+
 function renderRichText(text: string): ReactNode {
   const lines = text.replace(/^\s*-{3,}\s*$/gm, "").split("\n");
   return lines.map((line, i) => (
     <Fragment key={i}>
       {i > 0 && <br />}
-      {line.split(/(\*\*[^*]+\*\*)/g).map((part, j) =>
-        part.startsWith("**") && part.endsWith("**") ? (
-          <strong key={j}>{part.slice(2, -2)}</strong>
-        ) : (
-          <Fragment key={j}>{part}</Fragment>
-        ),
-      )}
+      {renderLine(line, `l${i}`)}
     </Fragment>
   ));
 }
@@ -73,6 +106,23 @@ export function MessageBubble({
   }
 
   const isOwn = message.role === ownRole;
+
+  // Tin ảnh gửi riêng — render ảnh độc lập (không bọc bubble chữ), canh theo phía gửi.
+  if (message.image) {
+    return (
+      <div className={cn("flex", isOwn ? "justify-end" : "justify-start")}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={message.image.url}
+          alt={message.image.alt || "Ảnh sản phẩm"}
+          loading="lazy"
+          referrerPolicy="no-referrer"
+          className="max-h-60 w-auto max-w-[70%] rounded-2xl border border-foreground/10 object-cover shadow-sm"
+        />
+      </div>
+    );
+  }
+
   return (
     <div className={cn("flex", isOwn ? "justify-end" : "justify-start")}>
       <div

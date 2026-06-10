@@ -23,7 +23,7 @@ import { payState, toPayment, type PaymentSeed, type Payment } from "./meta";
 
 // M5 Thanh toán (HITL) — tách 3 góc nhìn (SegmentView §6.11, đồng bộ Orders/Products):
 //   • Chỉ số (metrics) — đọc: KPI phễu + dòng tiền + phân bổ trạng thái. Căn giữa max-w-6xl (§6.11).
-//   • Thu tiền (collect) — thao tác: zone duyệt HITL (đơn lớn/hoàn tiền) + bảng §6.12 (lọc/sắp/phân trang). Full-width.
+//   • Thu tiền (collect) — thao tác: zone duyệt HITL (hoàn tiền/khoản cần xác nhận) + bảng §6.12 (lọc/sắp/phân trang). Full-width.
 //   • Cài đặt (settings) — cấu hình: tự tạo QR + chọn cổng thanh toán. Căn giữa max-w-4xl (§6.14).
 // needsApproval phải qua bước Duyệt; duyệt xong agent tự gửi QR. Đọc mock payments.json. Bám design.md §5/§6.
 
@@ -131,23 +131,23 @@ export function PaymentsScreen({ initialTab, initialId }: { initialTab?: string;
         <>
           <header className="min-w-0">
             <p className="text-xs text-muted-foreground sm:text-sm">
-              Theo dõi tiền thu theo đơn, duyệt đơn lớn và hoàn tiền.
+              Theo dõi thanh toán theo đơn, duyệt hoàn tiền và khoản cần xác nhận.
             </p>
             <h1 className="text-pretty text-base font-semibold sm:text-lg">
               {pending.length > 0 ? (
                 <>
-                  Thu tiền theo đơn,{" "}
+                  {queue.length} khoản thanh toán,{" "}
                   <span className="text-amber-600">{pending.length} khoản cần bạn duyệt.</span>
                 </>
               ) : (
-                <span className="text-emerald-600">Khâu nhạy cảm đã duyệt xong — agent đang thu tiền.</span>
+                <span className="text-emerald-600">Không còn khoản nào chờ duyệt — agent đang tự gửi QR cho khách.</span>
               )}
             </h1>
           </header>
 
           <section className="space-y-3" aria-labelledby="payments-overview-h">
             <h2 id="payments-overview-h" className="text-lg font-semibold">
-              Tổng quan thu tiền
+              Tổng quan thanh toán
             </h2>
             <PaymentKpis queue={queue} />
           </section>
@@ -155,7 +155,7 @@ export function PaymentsScreen({ initialTab, initialId }: { initialTab?: string;
           <PaymentBreakdown queue={queue} />
         </>
       ) : (
-        /* Tab Thu tiền — zone duyệt HITL + bảng thao tác + panel chi tiết docked. */
+        /* Tab Thanh toán — zone duyệt HITL + bảng thao tác + panel chi tiết docked. */
         <>
           <PaymentApprovalQueue
             pending={pending}
@@ -179,7 +179,7 @@ export function PaymentsScreen({ initialTab, initialId }: { initialTab?: string;
               )}
             >
               <h2 id="collect-h" className="sr-only">
-                Danh sách khoản thu
+                Danh sách khoản thanh toán
               </h2>
               <div className="shrink-0 rounded-t-xl border-b bg-card p-2">
                 <PaymentsToolbar

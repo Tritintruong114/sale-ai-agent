@@ -16,9 +16,9 @@ export function PaymentKpis({ queue }: { queue: Payment[] }) {
 
   const kpis: Kpi[] = [
     { key: "approval", label: "Cần bạn duyệt", value: String(pending), icon: KPI_ICON.approval, chip: "bg-amber-100 text-amber-700", accent: pending > 0 },
-    { key: "awaiting", label: "Chờ thu", value: String(awaiting), icon: KPI_ICON.awaiting, chip: "bg-orange-100 text-orange-700" },
+    { key: "awaiting", label: "Chờ thanh toán", value: String(awaiting), icon: KPI_ICON.awaiting, chip: "bg-orange-100 text-orange-700" },
     { key: "paid", label: "Đã thanh toán", value: String(paidList.length), icon: Check, chip: "bg-emerald-100 text-emerald-700" },
-    { key: "collected", label: "Tiền đã thu", value: compactVND(collected), icon: KPI_ICON.collected, chip: "bg-emerald-100 text-emerald-700" },
+    { key: "collected", label: "Tiền đã nhận", value: compactVND(collected), icon: KPI_ICON.collected, chip: "bg-emerald-100 text-emerald-700" },
   ];
 
   return (

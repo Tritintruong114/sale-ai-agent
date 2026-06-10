@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowUpDown,
@@ -9,6 +9,7 @@ import {
   CircleDot,
   Flag,
   Headset,
+  Inbox,
   PanelRightOpen,
   Search,
   Share2,
@@ -24,17 +25,17 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
-import raw from "@/data/conversations.json";
-import customersRaw from "@/data/customers.json";
 
 // M1 Inbox — list + chat + hand-off (G3 ★) + dải "agent đang tư vấn N khách" (M1.2).
-// Đọc mock conversations.json; mọi thay đổi là state client.
+// Nhận hội thoại + hồ sơ từ InboxStateController (theo trạng thái nguyên mẫu). Thao tác của
+// người dùng (gửi tin, bật/tắt agent, nhận việc, đã đọc) lưu ở lớp "localEdits" rồi phủ lên
+// feed — nhờ vậy nhịp realtime đổ dữ liệu mới mà không xoá thao tác đang có.
 
 type Status = "new" | "exploring" | "quoted" | "awaiting_payment" | "closed";
 type ChannelFilter = "all" | "facebook" | "zalo";
 type SortKey = "recent" | "unread" | "attention";
 
-type Conversation = {
+export type Conversation = {
   id: string;
   customerName: string;
   channel: string;
@@ -47,13 +48,130 @@ type Conversation = {
   messages: ChatMessage[];
 };
 
-const INITIAL = (raw.conversations as Conversation[]).map((c) => ({
-  ...c,
-  messages: c.messages.map((m) => ({ ...m, role: m.role as ChatMessage["role"] })),
-}));
+// Thao tác cục bộ phủ lên một hội thoại của feed (giữ qua các nhịp realtime).
+type LocalEdit = {
+  sent?: ChatMessage[]; // tin agent/system người dùng thêm vào, nối sau tin của feed
+  agentActive?: boolean;
+  acknowledged?: boolean; // đã "nhận việc" handoff
+  read?: boolean; // đã mở → unread = 0
+};
 
-// Hồ sơ khách (panel phải) — sửa được tại chỗ nên giữ ở state, khởi tạo từ mock.
-const INITIAL_PROFILES = customersRaw.customers as Record<string, CustomerProfile>;
+// Phủ localEdits lên hội thoại feed để ra hội thoại hiển thị.
+function applyEdits(c: Conversation, e?: LocalEdit): Conversation {
+  if (!e) return c;
+  return {
+    ...c,
+    agentActive: e.agentActive ?? c.agentActive,
+    handoff: c.handoff ? { ...c.handoff, acknowledged: e.acknowledged ?? c.handoff.acknowledged } : c.handoff,
+    unread: e.read ? 0 : c.unread,
+    messages: e.sent?.length ? [...c.messages, ...e.sent] : c.messages,
+  };
+}
+
+// Nhấp nháy nhẹ khi giá trị đổi — chỉ bật ở chế độ thời gian thực (khuôn FlashOnChange Dashboard).
+function useFlash(value: string | number, active: boolean) {
+  const [flash, setFlash] = useState(false);
+  const prev = useRef(value);
+  useEffect(() => {
+    if (!active || prev.current === value) {
+      prev.current = value;
+      return;
+    }
+    prev.current = value;
+    setFlash(true);
+    const id = setTimeout(() => setFlash(false), 600);
+    return () => clearTimeout(id);
+  }, [value, active]);
+  return flash;
+}
+
+// Badge LIVE ở header danh sách khi đang chạy thời gian thực (đồng bộ Dashboard).
+function LiveBadge() {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 ring-1 ring-emerald-200">
+      <span className="size-1.5 rounded-full bg-emerald-500 motion-safe:animate-pulse" aria-hidden />
+      LIVE
+    </span>
+  );
+}
+
+// Một dòng hội thoại trong danh sách. Nháy nhẹ khi có tin/đếm chưa đọc đổi (chỉ ở realtime).
+function ConversationButton({
+  c,
+  selected,
+  live,
+  onSelect,
+}: {
+  c: Conversation;
+  selected: boolean;
+  live: boolean;
+  onSelect: (id: string) => void;
+}) {
+  const human = needsHuman(c);
+  const last = c.messages[c.messages.length - 1];
+  const lastText =
+    last?.role === "typing" ? "Agent đang soạn trả lời…" : last?.image ? "[Hình sản phẩm]" : last?.text;
+  const flash = useFlash(`${c.messages.length}:${c.unread}`, live);
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect(c.id)}
+      aria-current={selected ? "true" : undefined}
+      className={cn(
+        "mb-1 flex w-full items-start gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors duration-700 cursor-pointer",
+        selected ? "bg-muted" : flash ? "bg-emerald-50" : "hover:bg-muted/60",
+      )}
+    >
+      {/* Avatar chữ cái */}
+      <span
+        aria-hidden
+        className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold text-foreground ring-1 ring-foreground/10"
+      >
+        {initials(c.customerName)}
+      </span>
+
+      <span className="flex min-w-0 flex-1 flex-col gap-1">
+        <span className="flex items-center gap-2">
+          <span className={cn("truncate text-sm", c.unread > 0 ? "font-semibold" : "font-medium")}>
+            {c.customerName}
+          </span>
+          <span className="ml-auto shrink-0 text-[11px] tabular-nums text-muted-foreground">
+            {hhmm(c.lastMessageAt)}
+          </span>
+        </span>
+
+        <span className="flex items-center gap-1.5">
+          <span className="truncate text-xs text-muted-foreground">{lastText}</span>
+          {c.unread > 0 ? (
+            <span className="ml-auto flex size-4 shrink-0 items-center justify-center rounded-full bg-destructive text-[10px] font-semibold text-white tabular-nums">
+              {c.unread}
+            </span>
+          ) : null}
+        </span>
+
+        <span className="flex flex-wrap items-center gap-1.5">
+          <span className="rounded-full bg-secondary px-1.5 py-0.5 text-[10px] font-medium text-secondary-foreground">
+            {channelLabel(c.channel)}
+          </span>
+          <span className={cn("rounded-full px-1.5 py-0.5 text-[10px] font-medium", STATUS_META[c.status].cls)}>
+            {STATUS_META[c.status].label}
+          </span>
+          {human ? (
+            <span className="flex items-center gap-1 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">
+              <Flag className="size-2.5" aria-hidden />
+              Cần người
+            </span>
+          ) : c.agentActive ? (
+            <span className="flex items-center gap-1 text-[10px] text-violet-600">
+              <Bot className="size-2.5" aria-hidden />
+              Agent đang trả lời
+            </span>
+          ) : null}
+        </span>
+      </span>
+    </button>
+  );
+}
 
 // tint = nền + viền cho trigger lọc khi đang chọn trạng thái này (cùng hệ màu với dot).
 const STATUS_META: Record<Status, { label: string; cls: string; dot: string; tint: string }> = {
@@ -119,18 +237,38 @@ const needsHuman = (c: Conversation) => Boolean(c.handoff && !c.handoff.acknowle
 // Trigger lọc dạng icon: chevron mảnh & nhạt; nền tô nhẹ khi bộ lọc khác mặc định.
 const FILTER_TRIGGER = "gap-1 px-2 [&>svg:last-child]:size-3 [&>svg:last-child]:text-muted-foreground/60";
 
-export function InboxScreen({ initialId }: { initialId?: string }) {
+export function InboxScreen({
+  initialId,
+  conversations: feed,
+  profiles: initialProfiles,
+  live = false,
+}: {
+  initialId?: string;
+  conversations: Conversation[];
+  profiles: Record<string, CustomerProfile>;
+  live?: boolean;
+}) {
   const router = useRouter();
-  const [conversations, setConversations] = useState<Conversation[]>(INITIAL);
-  const [profiles, setProfiles] = useState<Record<string, CustomerProfile>>(INITIAL_PROFILES);
+  const [localEdits, setLocalEdits] = useState<Record<string, LocalEdit>>({});
+  const [profiles, setProfiles] = useState<Record<string, CustomerProfile>>(initialProfiles);
   const [filter, setFilter] = useState<Status | "all">("all");
   const [attention, setAttention] = useState<AttentionFilter>("all");
   const [channel, setChannel] = useState<ChannelFilter>("all");
   const [sort, setSort] = useState<SortKey>("recent");
   const [query, setQuery] = useState("");
-  const [selectedId, setSelectedId] = useState<string>(
-    initialId && INITIAL.some((c) => c.id === initialId) ? initialId : INITIAL[0].id,
+  const [selectedId, setSelectedId] = useState<string | null>(
+    initialId && feed.some((c) => c.id === initialId) ? initialId : feed[0]?.id ?? null,
   );
+
+  // Hội thoại hiển thị = feed (theo trạng thái nguyên mẫu) phủ thao tác cục bộ.
+  const conversations = useMemo(
+    () => feed.map((c) => applyEdits(c, localEdits[c.id])),
+    [feed, localEdits],
+  );
+
+  // Cập nhật/gộp một localEdit theo id hội thoại.
+  const patchEdit = (id: string, fn: (e: LocalEdit) => LocalEdit) =>
+    setLocalEdits((prev) => ({ ...prev, [id]: fn(prev[id] ?? {}) }));
   // Master-detail trên mobile: false = đang xem danh sách, true = đang mở hội thoại.
   const [chatOpenMobile, setChatOpenMobile] = useState(false);
   // Panel hồ sơ khách: cố định ở cột phải từ xl trở lên; dưới xl mở dạng overlay.
@@ -174,7 +312,7 @@ export function InboxScreen({ initialId }: { initialId?: string }) {
   const select = (id: string) => {
     setSelectedId(id);
     setChatOpenMobile(true);
-    setConversations((prev) => prev.map((c) => (c.id === id ? { ...c, unread: 0 } : c)));
+    patchEdit(id, (e) => ({ ...e, read: true }));
   };
 
   const resetFilters = () => {
@@ -185,36 +323,29 @@ export function InboxScreen({ initialId }: { initialId?: string }) {
   };
 
   const sendMessage = (text: string) => {
-    setConversations((prev) =>
-      prev.map((c) =>
-        c.id === selectedId
-          ? { ...c, messages: [...c.messages, { id: `m-${c.id}-${c.messages.length}`, role: "agent", text }] }
-          : c,
-      ),
-    );
+    if (!selectedId) return;
+    patchEdit(selectedId, (e) => ({
+      ...e,
+      sent: [...(e.sent ?? []), { id: `local-${selectedId}-${e.sent?.length ?? 0}`, role: "agent", text }],
+    }));
   };
 
   const toggleAgent = (on: boolean) => {
-    setConversations((prev) =>
-      prev.map((c) =>
-        c.id === selectedId
-          ? {
-              ...c,
-              agentActive: on,
-              messages: [
-                ...c.messages,
-                {
-                  id: `m-${c.id}-agent-${c.messages.length}`,
-                  role: "system",
-                  text: on
-                    ? "Đã bật agent — agent tiếp tục tự trả lời khách"
-                    : "Đã tắt agent — bạn trả lời khách trực tiếp",
-                },
-              ],
-            }
-          : c,
-      ),
-    );
+    if (!selectedId) return;
+    patchEdit(selectedId, (e) => ({
+      ...e,
+      agentActive: on,
+      sent: [
+        ...(e.sent ?? []),
+        {
+          id: `local-${selectedId}-${e.sent?.length ?? 0}`,
+          role: "system",
+          text: on
+            ? "Đã bật agent — agent tiếp tục tự trả lời khách"
+            : "Đã tắt agent — bạn trả lời khách trực tiếp",
+        },
+      ],
+    }));
   };
 
   const saveProfile = (id: string, next: Omit<CustomerProfile, "firstSeenAt">) => {
@@ -231,21 +362,20 @@ export function InboxScreen({ initialId }: { initialId?: string }) {
   };
 
   const takeOver = () => {
-    setConversations((prev) =>
-      prev.map((c) =>
-        c.id === selectedId && c.handoff
-          ? {
-              ...c,
-              agentActive: false,
-              handoff: { ...c.handoff, acknowledged: true },
-              messages: [
-                ...c.messages,
-                { id: `m-${c.id}-ack`, role: "system", text: "Bạn đã nhận việc — agent tạm dừng để bạn xử lý" },
-              ],
-            }
-          : c,
-      ),
-    );
+    if (!selectedId) return;
+    patchEdit(selectedId, (e) => ({
+      ...e,
+      agentActive: false,
+      acknowledged: true,
+      sent: [
+        ...(e.sent ?? []),
+        {
+          id: `local-${selectedId}-${e.sent?.length ?? 0}`,
+          role: "system",
+          text: "Bạn đã nhận việc — agent tạm dừng để bạn xử lý",
+        },
+      ],
+    }));
   };
 
   return (
@@ -258,6 +388,14 @@ export function InboxScreen({ initialId }: { initialId?: string }) {
             chatOpenMobile ? "hidden md:flex" : "flex",
           )}
         >
+          {/* Dải LIVE — chỉ hiện ở chế độ thời gian thực */}
+          {live ? (
+            <div className="flex items-center justify-between border-b px-3 py-1.5">
+              <span className="text-xs font-medium text-muted-foreground">Hộp thư trực tiếp</span>
+              <LiveBadge />
+            </div>
+          ) : null}
+
           {/* Tìm kiếm */}
           <div className="border-b p-2">
             <div className="relative">
@@ -431,7 +569,16 @@ export function InboxScreen({ initialId }: { initialId?: string }) {
 
           {/* Danh sách */}
           <div className="min-h-0 flex-1 overflow-auto p-1.5">
-            {visible.length === 0 ? (
+            {conversations.length === 0 ? (
+              // Chưa có hội thoại nào (trạng thái "Chưa có dữ liệu", hoặc realtime chưa khởi động)
+              <div className="flex h-full flex-col items-center justify-center gap-1.5 px-4 text-center">
+                <Inbox className="size-7 text-muted-foreground/60" aria-hidden />
+                <p className="text-sm font-medium">Chưa có hội thoại nào</p>
+                <p className="max-w-[15rem] text-xs text-muted-foreground">
+                  {live ? "Đang chờ khách nhắn tới — hội thoại sẽ hiện ở đây." : "Khi khách nhắn tới, hội thoại sẽ hiện ở đây."}
+                </p>
+              </div>
+            ) : visible.length === 0 ? (
               <div className="flex h-full flex-col items-center justify-center gap-2 px-4 text-center">
                 <p className="text-sm text-muted-foreground">
                   {query ? "Không tìm thấy hội thoại phù hợp." : "Chưa có hội thoại ở trạng thái này."}
@@ -441,71 +588,9 @@ export function InboxScreen({ initialId }: { initialId?: string }) {
                 </Button>
               </div>
             ) : (
-              visible.map((c) => {
-                const human = needsHuman(c);
-                const lastText = c.messages[c.messages.length - 1]?.text;
-                const isSelected = c.id === selectedId;
-                return (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() => select(c.id)}
-                    aria-current={isSelected ? "true" : undefined}
-                    className={cn(
-                      "mb-1 flex w-full items-start gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors cursor-pointer",
-                      isSelected ? "bg-muted" : "hover:bg-muted/60",
-                    )}
-                  >
-                    {/* Avatar chữ cái */}
-                    <span
-                      aria-hidden
-                      className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold text-foreground ring-1 ring-foreground/10"
-                    >
-                      {initials(c.customerName)}
-                    </span>
-
-                    <span className="flex min-w-0 flex-1 flex-col gap-1">
-                      <span className="flex items-center gap-2">
-                        <span className={cn("truncate text-sm", c.unread > 0 ? "font-semibold" : "font-medium")}>
-                          {c.customerName}
-                        </span>
-                        <span className="ml-auto shrink-0 text-[11px] tabular-nums text-muted-foreground">
-                          {hhmm(c.lastMessageAt)}
-                        </span>
-                      </span>
-
-                      <span className="flex items-center gap-1.5">
-                        <span className="truncate text-xs text-muted-foreground">{lastText}</span>
-                        {c.unread > 0 ? (
-                          <span className="ml-auto flex size-4 shrink-0 items-center justify-center rounded-full bg-destructive text-[10px] font-semibold text-white tabular-nums">
-                            {c.unread}
-                          </span>
-                        ) : null}
-                      </span>
-
-                      <span className="flex flex-wrap items-center gap-1.5">
-                        <span className="rounded-full bg-secondary px-1.5 py-0.5 text-[10px] font-medium text-secondary-foreground">
-                          {channelLabel(c.channel)}
-                        </span>
-                        <span className={cn("rounded-full px-1.5 py-0.5 text-[10px] font-medium", STATUS_META[c.status].cls)}>
-                          {STATUS_META[c.status].label}
-                        </span>
-                        {human ? (
-                          <span className="flex items-center gap-1 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">
-                            <Flag className="size-2.5" aria-hidden />
-                            Cần người
-                          </span>
-                        ) : c.agentActive ? (
-                          <span className="flex items-center gap-1 text-[10px] text-violet-600">
-                            <Bot className="size-2.5" aria-hidden />
-                            Agent đang trả lời
-                          </span>
-                        ) : null}
-                      </span>
-                    </span>
-                  </button>
-                );
-              })
+              visible.map((c) => (
+                <ConversationButton key={c.id} c={c} selected={c.id === selectedId} live={live} onSelect={select} />
+              ))
             )}
           </div>
         </div>

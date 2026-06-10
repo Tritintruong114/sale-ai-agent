@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { useAgentConfig } from "@/store/agentConfigStore";
 import { useUiStore } from "@/store/uiStore";
 import raw from "@/data/orders.json";
 import { ApprovalQueue } from "./ApprovalQueue";
@@ -29,13 +28,12 @@ import {
 import { NEXT_STATUS, type Approval, type Order } from "./meta";
 
 // M2 Quản lý đơn — lede + KPI + zone duyệt HITL + lọc/tìm + Board/List + panel chi tiết docked.
-// Ngưỡng tự chốt đọc từ agentConfigStore (nguồn sự thật chung M6.2). Bấm đơn → mở panel; "Xem hội thoại" → X1.
+// Bấm đơn → mở panel; "Xem hội thoại" → X1.
 
 const INITIAL = raw.orders as Order[];
 
 export function OrdersScreen({ highlightId, initialTab }: { highlightId?: string; initialTab?: string }) {
   const router = useRouter();
-  const threshold = useAgentConfig((s) => s.config.autoCloseThreshold);
 
   const [orders, setOrders] = useState<Order[]>(INITIAL);
   const [query, setQuery] = useState("");
@@ -156,13 +154,13 @@ export function OrdersScreen({ highlightId, initialTab }: { highlightId?: string
             <h1 className="text-pretty text-base font-semibold sm:text-lg">
               {orders.length} đơn đang theo dõi,{" "}
               {pending.length > 0 ? (
-                <span className="text-amber-600">{pending.length} đơn lớn chờ bạn duyệt.</span>
+                <span className="text-amber-600">{pending.length} đơn chờ bạn duyệt.</span>
               ) : (
                 <span className="text-emerald-600">tất cả đơn đã được xử lý.</span>
               )}
             </h1>
             <p className="text-xs text-muted-foreground sm:text-sm">
-              Theo dõi đơn agent chốt từ hội thoại, duyệt nhanh các đơn lớn.
+              Theo dõi đơn agent chốt từ hội thoại, duyệt nhanh khi cần.
             </p>
           </header>
 
@@ -180,7 +178,6 @@ export function OrdersScreen({ highlightId, initialTab }: { highlightId?: string
         <>
           <ApprovalQueue
             pending={pending}
-            threshold={threshold}
             onView={() => setApproval("pending")}
             viewing={approval === "pending"}
           />

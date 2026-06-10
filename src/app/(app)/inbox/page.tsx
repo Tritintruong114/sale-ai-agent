@@ -1,4 +1,4 @@
-import { InboxScreen } from "@/components/inbox/InboxScreen";
+import { InboxStateController } from "@/components/inbox/InboxStateController";
 
 export default async function InboxPage({
   searchParams,
@@ -6,5 +6,5 @@ export default async function InboxPage({
   searchParams: Promise<{ c?: string }>;
 }) {
   const { c } = await searchParams;
-  return <InboxScreen initialId={c} />;
+  return <InboxStateController initialId={c} />;
 }

@@ -12,4 +12,6 @@ export type ChatMessage = {
   steps?: string[];
   // tool: thẻ tool-call — nhãn việc đang làm, trạng thái, và file đích (vd "VIBE-TONE.md").
   tool?: { label: string; status: "running" | "done"; target?: string };
+  // image: tin ảnh gửi riêng (vd agent gửi hình sản phẩm) — render thành ảnh độc lập, không bọc bubble chữ.
+  image?: { url: string; alt?: string };
 };

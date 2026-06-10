@@ -128,7 +128,7 @@ export function TopBar() {
               </TabsTrigger>
               <TabsTrigger value="collect" className="flex-none gap-1.5 px-0">
                 <Wallet aria-hidden />
-                Thu tiền
+                Thanh toán
                 {PENDING_COUNTS.payments > 0 ? (
                   <span className="ml-0.5 inline-flex min-w-4 items-center justify-center rounded-full bg-amber-100 px-1 text-[10px] font-semibold tabular-nums text-amber-700">
                     {PENDING_COUNTS.payments}

@@ -126,5 +126,17 @@
   }
   html {
     @apply font-sans;
+    /* Shrink toàn cục: mọi utility theo rem (font, padding, gap, size, calc rem) co đồng đều.
+       16px -> 14.4px. Chỉnh số này để to/nhỏ hơn (87.5% ~14px, 85% ~13.6px). */
+    font-size: 90%;
+  }
+}
+
+/* Ẩn thanh cuộn (vẫn cuộn được) — dùng cho vùng overflow ngang như bảng nhật ký đào tạo. */
+@utility scrollbar-hide {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge cũ */
+  &::-webkit-scrollbar {
+    display: none; /* WebKit */
   }
 }

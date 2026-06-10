@@ -19,7 +19,7 @@ import {
 // tabular, hàng chọn nổi bật + truy cập bàn phím. Bấm hàng → mở panel. Sort do cha quản (controlled)
 // để sắp xếp toàn bộ tập rồi mới phân trang (xem OrdersScreen) — không chỉ sắp trong 1 trang.
 //
-// Hai trục trạng thái tách bạch: "Đơn hàng" = vòng đời xử lý (đổi tại chỗ), "Tư vấn" = phễu hội thoại
+// Hai trục trạng thái tách bạch: "Xử lý" = vòng đời xử lý đơn (đổi tại chỗ), "Tư vấn" = phễu hội thoại
 // (đọc, join từ conversations.json). Duyệt/thanh toán/giao là chi tiết — xem ở panel, không nhồi vào bảng.
 
 export type OrderSortKey = "customer" | "createdAt" | "total" | "status";
@@ -54,7 +54,7 @@ const COLUMNS: { key: OrderSortKey; label: string; align: "left" | "right"; clas
   { key: "customer", label: "Khách hàng", align: "left" },
   { key: "createdAt", label: "Ngày tạo", align: "left" },
   { key: "total", label: "Giá trị", align: "right" },
-  { key: "status", label: "Đơn hàng", align: "left" },
+  { key: "status", label: "Xử lý", align: "left" },
 ];
 
 // Đổi trạng thái đơn hàng (stage) ngay trong bảng — dropdown 3 mốc Mới/Đang xử lý/Hoàn tất.

@@ -1,5 +1,5 @@
 {
-  "_note": "M2 Quản lý đơn — trục trạng thái Mới→Đang xử lý→Hoàn tất (M2.1). approval suy từ total vs autoCloseThreshold=300.000đ (config.ts): dưới→auto (Agent đã chốt), trên→pending (Chờ chủ shop xác nhận) (M2.2). conversationId trỏ về conversations.json (X1). Đúng 2 đơn approval=pending khớp PENDING_COUNTS.bigOrders=2. items.productId trỏ catalog products.json (trái cây + mâm cúng + giỏ quà) để cross-link Sản phẩm↔Đơn↔Hội thoại chạy. Trường mở rộng: channel, paymentStatus, address, note, timeline[] (mốc trạng thái, tone theo hệ màu §5 design.md).",
+  "_note": "M2 Quản lý đơn — trục trạng thái Mới→Đang xử lý→Hoàn tất (M2.1). approval: auto (Agent đã chốt) hoặc pending (Chờ chủ shop xác nhận) — đơn agent chuyển để chủ shop duyệt trước khi xử lý. conversationId trỏ về conversations.json (X1). Đúng 2 đơn approval=pending khớp PENDING_COUNTS.bigOrders=2. items.productId trỏ catalog products.json (trái cây + mâm cúng + giỏ quà) để cross-link Sản phẩm↔Đơn↔Hội thoại chạy. Trường mở rộng: channel, paymentStatus, address, note, timeline[] (mốc trạng thái, tone theo hệ màu §5 design.md).",
   "orders": [
     {
       "id": "o-001",
@@ -45,7 +45,7 @@
       "createdAt": "2026-06-09T09:42:00+07:00",
       "timeline": [
         { "at": "2026-06-09T09:42:00+07:00", "label": "Agent tạo đơn", "tone": "sky" },
-        { "at": "2026-06-09T09:42:00+07:00", "label": "Đơn vượt ngưỡng — chờ bạn duyệt", "tone": "amber" }
+        { "at": "2026-06-09T09:42:00+07:00", "label": "Đơn chờ bạn duyệt", "tone": "amber" }
       ]
     },
     {
@@ -90,7 +90,7 @@
       "createdAt": "2026-06-09T10:03:00+07:00",
       "timeline": [
         { "at": "2026-06-09T10:03:00+07:00", "label": "Agent tạo đơn", "tone": "sky" },
-        { "at": "2026-06-09T10:03:00+07:00", "label": "Đơn vượt ngưỡng — chờ bạn duyệt", "tone": "amber" }
+        { "at": "2026-06-09T10:03:00+07:00", "label": "Đơn chờ bạn duyệt", "tone": "amber" }
       ]
     },
     {

@@ -41,7 +41,7 @@ const COLUMNS: { key: PaySortKey; label: string; align: "left" | "right"; classN
   { key: "customer", label: "Khách hàng", align: "left" },
   { key: "createdAt", label: "Thời gian", align: "left", className: "hidden md:table-cell" },
   { key: "amount", label: "Số tiền", align: "right" },
-  { key: "state", label: "Trạng thái thu", align: "left" },
+  { key: "state", label: "Trạng thái thanh toán", align: "left" },
 ];
 
 function StateChip({ p }: { p: Payment }) {
@@ -76,7 +76,7 @@ export function PaymentTable({
     return (
       <div className="flex flex-col items-center gap-1.5 rounded-xl border border-dashed py-12 text-center">
         <Wallet className="size-6 text-muted-foreground" aria-hidden />
-        <p className="text-sm text-muted-foreground">Không có khoản thu nào khớp bộ lọc</p>
+        <p className="text-sm text-muted-foreground">Không có khoản thanh toán nào khớp bộ lọc</p>
       </div>
     );
   }
@@ -85,7 +85,7 @@ export function PaymentTable({
     <div className="overflow-x-auto rounded-lg ring-1 ring-foreground/10">
       <table className="w-full min-w-[44rem] border-collapse text-left">
         <caption className="sr-only">
-          Danh sách khoản thu — bấm tiêu đề cột để sắp xếp, bấm một hàng để mở chi tiết khoản thu.
+          Danh sách khoản thanh toán — bấm tiêu đề cột để sắp xếp, bấm một hàng để mở chi tiết.
         </caption>
         <thead>
           <tr className="border-b bg-muted/40 [&_th]:h-9 [&_th]:px-3 [&_th]:align-middle">
@@ -145,7 +145,7 @@ export function PaymentTable({
                 }}
                 tabIndex={0}
                 aria-selected={selected}
-                aria-label={`Khoản thu của ${p.customerName}, ${formatVND(p.amount)} — mở chi tiết`}
+                aria-label={`Khoản thanh toán của ${p.customerName}, ${formatVND(p.amount)} — mở chi tiết`}
                 className={cn(
                   "cursor-pointer outline-none transition-colors [&>td]:px-3 [&>td]:py-2.5 [&>td]:align-middle",
                   "hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/50",

@@ -50,12 +50,12 @@ export function PaymentsToolbar({
         ) : null}
       </div>
 
-      {/* Lọc trạng thái thu */}
+      {/* Lọc trạng thái thanh toán */}
       <Select value={state} onValueChange={(v) => onState(v as PayStateFilter)}>
         <SelectTrigger
           size="sm"
           className={cn(FILTER_TRIGGER, state !== "all" && PAY_STATE_META[state].tint)}
-          aria-label="Lọc theo trạng thái thu"
+          aria-label="Lọc theo trạng thái thanh toán"
           title={`Trạng thái: ${state === "all" ? "Mọi trạng thái" : PAY_STATE_META[state].label}`}
         >
           {state === "all" ? (
@@ -67,7 +67,7 @@ export function PaymentsToolbar({
           )}
         </SelectTrigger>
         <SelectContent className="min-w-52">
-          <div className="px-1.5 pb-1 pt-0.5 text-[11px] font-medium text-muted-foreground">Trạng thái thu</div>
+          <div className="px-1.5 pb-1 pt-0.5 text-[11px] font-medium text-muted-foreground">Trạng thái thanh toán</div>
           <SelectItem value="all">
             <CircleDot className="size-4 text-muted-foreground" aria-hidden />
             Mọi trạng thái

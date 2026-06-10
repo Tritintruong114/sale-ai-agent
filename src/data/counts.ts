@@ -3,6 +3,6 @@
 
 export const PENDING_COUNTS = {
   handoff: 3, // M1 — hội thoại cần người
-  bigOrders: 2, // M2 — đơn lớn chờ duyệt
+  bigOrders: 2, // M2 — đơn chờ duyệt
   payments: 1, // M5 — thanh toán chờ duyệt
 };

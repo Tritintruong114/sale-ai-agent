@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Download, Eye, FileText, GraduationCap, MoreVertical, Pencil, Send, Sparkles, Trash2, Upload, X } from "lucide-react";
+import { Check, ChevronRight, Download, Eye, FileText, GraduationCap, Hand, MoreVertical, Pencil, Plus, Send, Sparkles, Trash2, Upload, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -16,11 +16,15 @@ import { ZaloIcon } from "@/components/icons/channel";
 import { AgentAvatar } from "@/components/shared/AgentAvatar";
 import { cn } from "@/lib/utils";
 import { useAgentConfig } from "@/store/agentConfigStore";
+import { type HandoffRule, type HandoffCategory } from "@/data/config";
 import { useUiStore } from "@/store/uiStore";
 import { AGENT_CONFIG_SECTIONS, type AgentConfigTab } from "./sections";
+import { LearningApprovalQueue } from "./LearningApprovalQueue";
+import { TrainingLog } from "./TrainingLog";
 import { BYOK_PROVIDERS } from "@/data/onboarding";
 import { AGENT_FILES, type AgentFile } from "@/data/agentFiles";
 import learningData from "@/data/learning.json";
+import trainingData from "@/data/training.json";
 
 // M6 Cấu hình Agent — hub các nhóm, đọc/ghi agentConfigStore (nguồn sự thật chung với Onboarding).
 // Điều hướng nhóm = segmented tabs trên TopBar (§6.11); panel theo useUiStore.agentConfigTab.
@@ -31,10 +35,33 @@ import learningData from "@/data/learning.json";
 type Journal = { id: string; insight: string; source: string; status: "pending" | "approved" | "dismissed" };
 
 const NOTIFY_EVENTS = [
-  { key: "handoff", label: "Hội thoại cần bàn giao", hint: "Agent dừng và bàn giao hội thoại cho bạn" },
-  { key: "big_order", label: "Đơn lớn chờ duyệt", hint: "Vượt ngưỡng tự chốt" },
-  { key: "payment", label: "Thanh toán cần duyệt", hint: "Khâu nhạy cảm cần bạn xác nhận" },
+  { key: "handoff", label: "Hội thoại cần người", hint: "Khi agent dừng và nhường bạn trả lời khách" },
+  { key: "big_order", label: "Đơn cần duyệt", hint: "Khi agent cần bạn xác nhận trước khi chốt đơn" },
+  { key: "payment", label: "Thanh toán cần duyệt", hint: "Khi agent cần bạn xác nhận một khoản thanh toán" },
 ];
+
+// Nhóm tình huống bàn giao — gom cho dễ quét, kèm câu gợi ý mục đích từng nhóm.
+const HANDOFF_CATEGORIES: { key: HandoffCategory; label: string; hint: string }[] = [
+  { key: "opportunity", label: "Cơ hội bán", hint: "Lúc nên có người thật để chốt đơn nhanh." },
+  { key: "risk", label: "Rủi ro – phàn nàn", hint: "Lúc cần bạn xử lý khéo để giữ khách." },
+  { key: "capability", label: "Vượt năng lực agent", hint: "Lúc agent chưa đủ thông tin để tự trả lời." },
+];
+
+// Sinh key duy nhất cho tình huống chủ shop tự thêm (bỏ dấu, gạch dưới, tránh trùng).
+function makeHandoffKey(label: string, taken: string[]): string {
+  const base =
+    label
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")
+      .replace(/đ/gi, "d")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "") || "tinh_huong";
+  let key = `custom_${base}`;
+  let i = 2;
+  while (taken.includes(key)) key = `custom_${base}_${i++}`;
+  return key;
+}
 
 export function AgentConfigScreen({ initialTab }: { initialTab?: string }) {
   const router = useRouter();
@@ -47,6 +74,14 @@ export function AgentConfigScreen({ initialTab }: { initialTab?: string }) {
   const [journal, setJournal] = useState<Journal[]>(learningData.journal as Journal[]);
   const avatarInput = useRef<HTMLInputElement>(null);
   const fileImport = useRef<HTMLInputElement>(null);
+
+  const [addingHandoff, setAddingHandoff] = useState(false); // mở dialog thêm tình huống bàn giao
+
+  // Sửa một tình huống bàn giao theo key (bật/tắt, ngưỡng, câu mẫu).
+  const updateHandoffRule = (key: string, patch: Partial<HandoffRule>) =>
+    setConfig({ handoffRules: config.handoffRules.map((r) => (r.key === key ? { ...r, ...patch } : r)) });
+  const removeHandoffRule = (key: string) =>
+    setConfig({ handoffRules: config.handoffRules.filter((r) => r.key !== key) });
 
   // Hồ sơ định nghĩa agent — CRUD client (prototype): seed từ AGENT_FILES, đổi là state (§10 mock-driven).
   const [files, setFiles] = useState<AgentFile[]>(AGENT_FILES);
@@ -110,9 +145,20 @@ export function AgentConfigScreen({ initialTab }: { initialTab?: string }) {
   }, [initialTab, setTab]);
 
   // …và đổi nhóm thì ghi ngược lên thanh địa chỉ (replace, không nhảy cuộn) — link chia sẻ + back đúng nhóm.
+  // Bỏ qua khi URL đã khớp để khỏi replace thừa (tránh nháy ?tab= lúc deep-link mới vào).
   useEffect(() => {
-    router.replace(`/agent-config?tab=${tab}`, { scroll: false });
+    const current = new URLSearchParams(window.location.search).get("tab");
+    if (current !== tab) router.replace(`/agent-config?tab=${tab}`, { scroll: false });
   }, [tab, router]);
+
+  // Ribbon "Xem" → cuộn xuống danh sách điều chờ duyệt (scroll-mt chừa chỗ cho topbar + ribbon).
+  const scrollToJournal = () => {
+    document.getElementById("journal")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  // Tóm tắt nhật ký đào tạo cho lede tab Đào tạo — log đã xếp mới→cũ nên phần tử đầu là gần nhất.
+  const trainingCount = trainingData.log.length;
+  const lastTrainedAt = trainingData.log[0] ? formatTrainedAt(trainingData.log[0].at) : "—";
 
   const pendingJournal = journal.filter((j) => j.status === "pending");
   const handoffOn = config.handoffRules.filter((r) => r.enabled).length;
@@ -123,10 +169,20 @@ export function AgentConfigScreen({ initialTab }: { initialTab?: string }) {
 
   return (
     // Màn config = trang cuộn (§6.1); form đọc dễ ở bề rộng vừa phải (line-length-control).
-    <div className="mx-auto max-w-3xl pb-4">
+    // Tab Đào tạo là bảng nhật ký → full width để xem thoải mái; các nhóm form còn lại giữ max-w-3xl.
+    <div className={cn("mx-auto pb-4", tab === "training" ? "max-w-none" : "max-w-3xl")}>
       <Tabs value={tab} onValueChange={(v) => setTab(v as AgentConfigTab)}>
         {/* M6.1 — Học hằng ngày (G2) */}
         <TabsContent value="learning" className="space-y-5">
+          {/* Ribbon HITL dưới topbar (§6.7) — tóm tắt điều chờ duyệt, "Xem" cuộn xuống danh sách. */}
+          {config.dailyLearning.enabled ? (
+            <LearningApprovalQueue
+              pending={pendingJournal.length}
+              hasJournal={journal.length > 0}
+              onView={scrollToJournal}
+            />
+          ) : null}
+
           <GroupHeader context="Duyệt điều agent học được mỗi ngày trước khi áp dụng.">
             {config.dailyLearning.enabled ? (
               pendingJournal.length > 0 ? (
@@ -179,9 +235,10 @@ export function AgentConfigScreen({ initialTab }: { initialTab?: string }) {
             </CardContent>
           </Card>
 
-          {/* Nhật ký học — duyệt HITL: banner amber khi còn việc, emerald khi xong (§5/§6.7). */}
+          {/* Nhật ký học — duyệt HITL: tóm tắt nằm ở ribbon trên topbar; ở đây là danh sách điều chờ duyệt.
+              id="journal" + scroll-mt-20 để nút "Xem" trên ribbon cuộn xuống, không bị topbar che. */}
           {config.dailyLearning.enabled ? (
-            <section className="space-y-2" aria-labelledby="journal-h">
+            <section id="journal" className="scroll-mt-20 space-y-2" aria-label="Nhật ký học hôm nay">
               {journal.length === 0 ? (
                 <EmptyState
                   icon={Sparkles}
@@ -189,37 +246,32 @@ export function AgentConfigScreen({ initialTab }: { initialTab?: string }) {
                   description="Khi agent rút ra điều mới từ hội thoại, nó sẽ ghi vào đây và xin bạn duyệt."
                 />
               ) : pendingJournal.length > 0 ? (
-                <div className="rounded-xl bg-amber-50 ring-1 ring-amber-200">
-                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 px-3 pb-1.5 pt-2.5">
-                    <GraduationCap className="size-4 shrink-0 text-amber-600" aria-hidden />
-                    <h2 id="journal-h" className="text-sm font-semibold text-amber-900">
-                      Cần bạn duyệt · {pendingJournal.length}
-                    </h2>
-                    <span className="text-xs text-amber-800">agent học được hôm nay — duyệt trước khi áp dụng</span>
-                  </div>
-                  <ul className="space-y-1.5 px-3 pb-3">
-                    {pendingJournal.map((j) => (
-                      <li key={j.id} className="flex flex-wrap items-start gap-3 rounded-lg bg-card px-3 py-2.5 ring-1 ring-amber-200/80">
-                        <span className="flex-1 text-sm">{j.insight}</span>
-                        <div className="ml-auto flex shrink-0 gap-1.5">
-                          <Button size="xs" onClick={() => setJournalStatus(j.id, "approved")}>
-                            <Check className="size-3" aria-hidden />
-                            Duyệt
-                          </Button>
-                          <Button size="xs" variant="ghost" onClick={() => setJournalStatus(j.id, "dismissed")}>
-                            Bỏ qua
-                          </Button>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800 ring-1 ring-emerald-200">
-                  <Check className="size-4 shrink-0 text-emerald-600" aria-hidden />
-                  <h2 id="journal-h" className="font-medium">Đã duyệt xong nhật ký hôm nay.</h2>
-                </div>
-              )}
+                <Card size="sm">
+                  <CardContent className="space-y-1.5">
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                      <GraduationCap className="size-4 shrink-0 text-amber-600" aria-hidden />
+                      <h2 className="text-sm font-semibold">Điều chờ bạn duyệt · {pendingJournal.length}</h2>
+                      <span className="text-xs text-muted-foreground">duyệt trước khi agent áp dụng vào câu trả lời</span>
+                    </div>
+                    <ul className="space-y-1.5">
+                      {pendingJournal.map((j) => (
+                        <li key={j.id} className="flex flex-wrap items-start gap-3 rounded-lg px-3 py-2.5 ring-1 ring-amber-200/80">
+                          <span className="flex-1 text-sm">{j.insight}</span>
+                          <div className="ml-auto flex shrink-0 gap-1.5">
+                            <Button size="xs" onClick={() => setJournalStatus(j.id, "approved")}>
+                              <Check className="size-3" aria-hidden />
+                              Duyệt
+                            </Button>
+                            <Button size="xs" variant="ghost" onClick={() => setJournalStatus(j.id, "dismissed")}>
+                              Bỏ qua
+                            </Button>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                </Card>
+              ) : null}
 
               {/* Lịch sử điều đã xử lý — chip trạng thái §5 (màu + nhãn). */}
               {journal.some((j) => j.status !== "pending") ? (
@@ -255,50 +307,94 @@ export function AgentConfigScreen({ initialTab }: { initialTab?: string }) {
           ) : null}
         </TabsContent>
 
+        {/* M6.2 — Đào tạo: nhật ký mỗi lần định nghĩa agent được cập nhật (re-train / tự học / sửa tay). */}
+        <TabsContent value="training" className="space-y-5">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <GroupHeader context="Theo dõi mỗi lần agent được đào tạo và những gì đã thay đổi.">
+              Đã đào tạo <span className="text-foreground">{trainingCount} lần</span> — lần gần nhất {lastTrainedAt}.
+            </GroupHeader>
+            <Button size="sm" onClick={trainAgent}>
+              <GraduationCap className="size-4" aria-hidden />
+              Train with Manager
+            </Button>
+          </div>
+          <TrainingLog />
+        </TabsContent>
+
         {/* M6.3 — Hand-off */}
         <TabsContent value="handoff" className="space-y-5">
-          <GroupHeader context="Chọn khi nào agent dừng lại và bàn giao hội thoại cho bạn.">
-            Đang bật <span className="text-foreground">{handoffOn}/{config.handoffRules.length}</span> tình huống bàn giao cho bạn.
+          <GroupHeader context="Chọn lúc agent nên dừng lại và nhường bạn xử lý trực tiếp với khách.">
+            {handoffOn > 0 ? (
+              <>
+                Đang bật <span className="text-foreground">{handoffOn}/{config.handoffRules.length}</span> tình huống bàn giao cho bạn.
+              </>
+            ) : (
+              <span className="text-amber-600">Chưa bật tình huống nào — agent sẽ tự trả lời mọi trường hợp.</span>
+            )}
           </GroupHeader>
 
-          <Card size="sm">
-            <CardContent className="space-y-2">
-              {config.handoffRules.map((r, i) => (
-                <SwitchRow
-                  key={r.key}
-                  checked={r.enabled}
-                  onCheckedChange={(v) => {
-                    const handoffRules = config.handoffRules.map((x, j) => (j === i ? { ...x, enabled: v } : x));
-                    setConfig({ handoffRules });
-                  }}
-                  label={r.label}
-                  right={
-                    r.threshold !== undefined ? (
-                      <div className="flex items-center gap-1.5">
-                        <Input
-                          type="number"
-                          className="w-28"
-                          value={r.threshold}
-                          onChange={(e) => {
-                            const handoffRules = config.handoffRules.map((x, j) =>
-                              j === i ? { ...x, threshold: Number(e.target.value) } : x,
-                            );
-                            setConfig({ handoffRules });
-                          }}
-                        />
-                        <span className="text-xs text-muted-foreground">{r.key === "discount" ? "%" : "đ"}</span>
-                      </div>
-                    ) : undefined
-                  }
-                />
-              ))}
-            </CardContent>
-          </Card>
+          {/* Giải thích cơ chế bàn giao (HITL) + nối sang tab Thông báo. */}
+          <div className="flex gap-3 rounded-xl bg-muted/40 p-3.5 ring-1 ring-foreground/10">
+            <Hand className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
+            <p className="text-sm text-muted-foreground">
+              <span className="font-medium text-foreground">Bàn giao</span> là khi agent tự dừng trả lời và chuyển hội thoại cho bạn. Lúc đó bạn nhận tin báo rồi tiếp nhận trực tiếp với khách —{" "}
+              <button
+                type="button"
+                onClick={() => setTab("notify")}
+                className="font-medium text-foreground underline decoration-foreground/30 underline-offset-2 hover:decoration-foreground"
+              >
+                chọn nơi nhận tin báo
+              </button>
+              .
+            </p>
+          </div>
+
+          {/* Gom theo nhóm cho dễ quét; mỗi rule có mô tả + ví dụ câu khách nói sửa được. */}
+          {HANDOFF_CATEGORIES.map((cat) => {
+            const rules = config.handoffRules.filter((r) => r.category === cat.key);
+            if (rules.length === 0) return null;
+            return (
+              <div key={cat.key} className="space-y-2">
+                <SubHead>{cat.label}</SubHead>
+                <Card size="sm">
+                  <CardContent className="space-y-2">
+                    {rules.map((r) => (
+                      <HandoffRuleRow
+                        key={r.key}
+                        rule={r}
+                        onToggle={(v) => updateHandoffRule(r.key, { enabled: v })}
+                        onThreshold={(n) => updateHandoffRule(r.key, { threshold: n })}
+                        onPhrasesChange={(phrases) => updateHandoffRule(r.key, { triggerPhrases: phrases })}
+                        onRemove={() => removeHandoffRule(r.key)}
+                      />
+                    ))}
+                  </CardContent>
+                </Card>
+              </div>
+            );
+          })}
+
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setAddingHandoff(true)}
+            className="w-full border-dashed text-muted-foreground hover:text-foreground"
+          >
+            <Plus className="size-4" aria-hidden />
+            Thêm tình huống bàn giao
+          </Button>
+
+          <AddHandoffDialog
+            open={addingHandoff}
+            onOpenChange={setAddingHandoff}
+            existingKeys={config.handoffRules.map((r) => r.key)}
+            onAdd={(rule) => setConfig({ handoffRules: [...config.handoffRules, rule] })}
+          />
         </TabsContent>
 
         {/* M6.4 — Danh tính */}
         <TabsContent value="identity" className="space-y-5">
-          <GroupHeader context="Chỉnh tên, cách xưng hô và lời chào của agent.">
+          <GroupHeader context="Cách agent xuất hiện với khách — tên, xưng hô, lời chào.">
             <span className="text-foreground">{config.identity.name}</span> · xưng{" "}
             <span className="text-foreground">{config.identity.pronoun}</span>.
           </GroupHeader>
@@ -324,7 +420,7 @@ export function AgentConfigScreen({ initialTab }: { initialTab?: string }) {
                       </Button>
                     ) : null}
                   </div>
-                  <p className="text-xs text-muted-foreground">Chưa đặt ảnh thì agent dùng hình tạo theo tên.</p>
+                  <p className="text-xs text-muted-foreground">Chưa có ảnh thì agent dùng ảnh tạo từ tên.</p>
                   <input ref={avatarInput} type="file" accept="image/*" className="hidden" onChange={onPickAvatar} />
                 </div>
               </div>
@@ -347,7 +443,7 @@ export function AgentConfigScreen({ initialTab }: { initialTab?: string }) {
                 <div className="space-y-0.5">
                   <SubHead>Hồ sơ định nghĩa agent</SubHead>
                   <p className="text-xs text-muted-foreground">
-                    Các file định hình cách agent trả lời — tải lên, sửa hoặc tải về.
+                    Các file định hình cách agent trả lời — tải lên, sửa hoặc tải xuống.
                   </p>
                 </div>
                 <div className="flex shrink-0 flex-wrap justify-end gap-1.5">
@@ -357,7 +453,7 @@ export function AgentConfigScreen({ initialTab }: { initialTab?: string }) {
                   </Button>
                   <Button variant="outline" size="xs" onClick={() => fileImport.current?.click()}>
                     <Upload className="size-3.5" aria-hidden />
-                    Tải file lên
+                    Tải lên
                   </Button>
                   <Button size="xs" onClick={trainAgent}>
                     <GraduationCap className="size-3.5" aria-hidden />
@@ -433,12 +529,12 @@ export function AgentConfigScreen({ initialTab }: { initialTab?: string }) {
 
         {/* M6.5 — Khoá AI / BYOK (G1) */}
         <TabsContent value="byok" className="space-y-5">
-          <GroupHeader context="Chọn chạy bằng khoá nền tảng hay khoá riêng của bạn.">
+          <GroupHeader context="Chọn chạy bằng khoá API nền tảng hay khoá API riêng của bạn.">
             {config.byok.mode === "platform" ? (
-              <>Đang dùng <span className="text-foreground">khoá nền tảng</span> — chạy ngay, không cần cấu hình.</>
+              <>Đang dùng <span className="text-foreground">khoá API nền tảng</span> — chạy ngay, không cần cấu hình.</>
             ) : (
               <>
-                Đang dùng <span className="text-foreground">khoá riêng</span> của bạn
+                Đang dùng <span className="text-foreground">khoá API riêng</span> của bạn
                 {config.byok.providers.length > 0 ? <> · {config.byok.providers.length} nhà cung cấp</> : null}.
               </>
             )}
@@ -449,14 +545,14 @@ export function AgentConfigScreen({ initialTab }: { initialTab?: string }) {
               <div className="grid gap-2 sm:grid-cols-2">
                 <ModeCard
                   active={config.byok.mode === "platform"}
-                  title="Khoá nền tảng"
+                  title="Khoá API nền tảng"
                   desc="Mặc định — chạy ngay, không cần cấu hình"
                   onClick={() => setConfig({ byok: { ...config.byok, mode: "platform" } })}
                 />
                 <ModeCard
                   active={config.byok.mode === "own"}
-                  title="Khoá riêng của bạn"
-                  desc="Dùng khoá riêng của bạn, tự kiểm soát chi phí"
+                  title="Khoá API riêng"
+                  desc="Dùng khoá API riêng của bạn, tự kiểm soát chi phí"
                   onClick={() => setConfig({ byok: { ...config.byok, mode: "own" } })}
                 />
               </div>
@@ -522,9 +618,29 @@ export function AgentConfigScreen({ initialTab }: { initialTab?: string }) {
                 />
               </div>
               <div className="space-y-2">
-                <SubHead>Loại tin báo</SubHead>
+                <SubHead>Báo khi nào</SubHead>
                 {NOTIFY_EVENTS.map((ev) => {
                   const on = config.notifyChannels.events.includes(ev.key);
+                  // Dòng bàn giao phản chiếu số tình huống đang bật + link sang tab Bàn giao (đối xứng link ngược lại).
+                  const hint =
+                    ev.key === "handoff" ? (
+                      <>
+                        {ev.hint} · theo{" "}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault(); // đừng để click link làm bật/tắt công tắc cùng <label>
+                            e.stopPropagation();
+                            setTab("handoff");
+                          }}
+                          className="font-medium text-foreground underline decoration-foreground/30 underline-offset-2 hover:decoration-foreground"
+                        >
+                          {handoffOn} tình huống đã bật ở Bàn giao
+                        </button>
+                      </>
+                    ) : (
+                      ev.hint
+                    );
                   return (
                     <SwitchRow
                       key={ev.key}
@@ -536,7 +652,7 @@ export function AgentConfigScreen({ initialTab }: { initialTab?: string }) {
                         setConfig({ notifyChannels: { ...config.notifyChannels, events } });
                       }}
                       label={ev.label}
-                      hint={ev.hint}
+                      hint={hint}
                     />
                   );
                 })}
@@ -616,6 +732,13 @@ function triggerDownload(filename: string, content: string) {
   a.click();
   a.remove();
   URL.revokeObjectURL(url);
+}
+
+// Thời gian đào tạo gần nhất, gọn cho lede: "09:24 · 10/06/2026" (tất định, không phụ thuộc locale).
+function formatTrainedAt(iso: string) {
+  const [date, time] = iso.split("T");
+  const [y, m, d] = date.split("-");
+  return `${(time ?? "").slice(0, 5)} · ${d}/${m}/${y}`;
 }
 
 // Tên file an toàn từ tên agent (bỏ dấu tiếng Việt) cho gói "Tải tất cả".
@@ -727,7 +850,7 @@ function SwitchRow({
   checked: boolean;
   onCheckedChange: (v: boolean) => void;
   label: React.ReactNode;
-  hint?: string;
+  hint?: React.ReactNode;
   right?: React.ReactNode;
 }) {
   return (
@@ -760,6 +883,192 @@ function EmptyState({
       <p className="text-sm font-medium">{title}</p>
       <p className="max-w-xs text-xs text-muted-foreground">{description}</p>
     </div>
+  );
+}
+
+// Một tình huống bàn giao: header (switch + mô tả + ngưỡng) và phần ví dụ câu khách nói bung ra để sửa.
+function HandoffRuleRow({
+  rule,
+  onToggle,
+  onThreshold,
+  onPhrasesChange,
+  onRemove,
+}: {
+  rule: HandoffRule;
+  onToggle: (v: boolean) => void;
+  onThreshold: (n: number) => void;
+  onPhrasesChange: (phrases: string[]) => void;
+  onRemove: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="rounded-lg ring-1 ring-foreground/10 transition-colors hover:bg-muted/30">
+      <div className="flex flex-wrap items-center gap-3 px-3 py-2.5">
+        <Switch checked={rule.enabled} onCheckedChange={(v) => onToggle(Boolean(v))} />
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm">{rule.label}</span>
+          <span className="block text-xs text-muted-foreground">{rule.description}</span>
+        </span>
+        {rule.threshold !== undefined ? (
+          <div className="flex items-center gap-1.5">
+            <Input
+              type="number"
+              className="w-24"
+              value={rule.threshold}
+              onChange={(e) => onThreshold(Number(e.target.value))}
+            />
+            <span className="text-xs text-muted-foreground">{rule.thresholdUnit ?? "đ"}</span>
+          </div>
+        ) : null}
+        {rule.custom ? (
+          <Button variant="ghost" size="icon-sm" onClick={onRemove} title="Xoá tình huống này" aria-label="Xoá tình huống này">
+            <Trash2 className="size-4" aria-hidden />
+          </Button>
+        ) : null}
+      </div>
+      <div className="px-3 pb-2.5">
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          className="inline-flex cursor-pointer items-center gap-1 rounded text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+          aria-expanded={open}
+        >
+          <ChevronRight className={cn("size-3.5 transition-transform", open && "rotate-90")} aria-hidden />
+          Ví dụ khách nói ({rule.triggerPhrases.length})
+        </button>
+        {open ? <PhraseEditor phrases={rule.triggerPhrases} onChange={onPhrasesChange} /> : null}
+      </div>
+    </div>
+  );
+}
+
+// Sửa danh sách câu mẫu nhận diện tình huống — chip xoá được + ô thêm (Enter hoặc nút Thêm).
+function PhraseEditor({ phrases, onChange }: { phrases: string[]; onChange: (next: string[]) => void }) {
+  const [draft, setDraft] = useState("");
+  const add = () => {
+    const v = draft.trim();
+    setDraft("");
+    if (!v || phrases.includes(v)) return;
+    onChange([...phrases, v]);
+  };
+  return (
+    <div className="mt-2 space-y-2">
+      <div className="flex flex-wrap gap-1.5">
+        {phrases.length > 0 ? (
+          phrases.map((p) => (
+            <span key={p} className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+              {p}
+              <button
+                type="button"
+                onClick={() => onChange(phrases.filter((x) => x !== p))}
+                className="-mr-0.5 cursor-pointer rounded-sm p-0.5 text-muted-foreground/70 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                aria-label={`Xoá câu mẫu ${p}`}
+              >
+                <X className="size-3" aria-hidden />
+              </button>
+            </span>
+          ))
+        ) : (
+          <span className="text-xs text-muted-foreground/70">Chưa có câu mẫu nào — thêm để agent nhận ra tình huống này chính xác hơn.</span>
+        )}
+      </div>
+      <div className="flex gap-2">
+        <Input
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              add();
+            }
+          }}
+          placeholder="Thêm câu khách thường nói…"
+          className="h-8 flex-1"
+        />
+        <Button type="button" variant="outline" size="sm" onClick={add} disabled={!draft.trim()}>
+          Thêm
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// Dialog thêm tình huống bàn giao do chủ shop tự định nghĩa.
+function AddHandoffDialog({
+  open,
+  onOpenChange,
+  existingKeys,
+  onAdd,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  existingKeys: string[];
+  onAdd: (rule: HandoffRule) => void;
+}) {
+  const [label, setLabel] = useState("");
+  const [description, setDescription] = useState("");
+  const [category, setCategory] = useState<HandoffCategory>("risk");
+  const reset = () => {
+    setLabel("");
+    setDescription("");
+    setCategory("risk");
+  };
+  const submit = () => {
+    const name = label.trim();
+    if (!name) return;
+    onAdd({
+      key: makeHandoffKey(name, existingKeys),
+      label: name,
+      description: description.trim() || "Tình huống do bạn thêm.",
+      category,
+      triggerPhrases: [],
+      enabled: true,
+      custom: true,
+    });
+    reset();
+    onOpenChange(false);
+  };
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        if (!o) reset();
+        onOpenChange(o);
+      }}
+    >
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Thêm tình huống bàn giao</DialogTitle>
+          <DialogDescription>Mô tả lúc agent nên dừng và nhường bạn xử lý. Bạn thêm câu mẫu sau khi tạo.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <Field label="Tên tình huống">
+            <Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="VD: Khách hỏi bảo hành" />
+          </Field>
+          <Field label="Khi nào agent dừng" hint="Một câu ngắn, dễ hiểu cho chính bạn về sau.">
+            <Textarea
+              rows={2}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="VD: Khách hỏi về điều kiện và thời hạn bảo hành."
+            />
+          </Field>
+          <Field label="Nhóm">
+            <div className="grid gap-2 sm:grid-cols-3">
+              {HANDOFF_CATEGORIES.map((c) => (
+                <ModeCard key={c.key} active={category === c.key} title={c.label} desc={c.hint} onClick={() => setCategory(c.key)} />
+              ))}
+            </div>
+          </Field>
+        </div>
+        <DialogFooter>
+          <DialogClose render={<Button variant="outline" />}>Huỷ</DialogClose>
+          <Button onClick={submit} disabled={!label.trim()}>
+            Thêm tình huống
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

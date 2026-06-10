@@ -1,0 +1,313 @@
+"use client";
+
+import { useState, type ReactNode } from "react";
+import { AgentAvatar } from "@/components/shared/AgentAvatar";
+import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
+import { ChatWindow } from "@/components/shared/chat/ChatWindow";
+import type { ChatMessage } from "@/components/shared/chat/MessageBubble";
+import { cn } from "@/lib/utils";
+import { useUiStore } from "@/store/uiStore";
+import { useAgentConfig } from "@/store/agentConfigStore";
+import { buildRetrainFlow, RETRAIN_TRIGGER, retrainCtaLabel, type RetrainTurn } from "@/data/retrainFlow";
+
+// Nội dung chat "Talk to Agent" — tách riêng khỏi khung trượt (AgentChatPanel) để tái dùng:
+// vừa render trong side panel, vừa render độc lập ở route /agent-chat (load qua iframe khi tách màn).
+// Toàn bộ state + logic hội thoại nằm ở đây; phần header nhận các nút điều khiển (đóng/tách) qua props.
+
+let seq = 0;
+const nextId = () => `ac-${seq++}`;
+const TYPING_ID = "ac-typing";
+const STEP_DELAY = 650; // nhịp phát từng bước trong kịch bản re-train (tất định).
+
+// Trả lời mẫu xoay vòng — copilot hỗ trợ chủ shop (không phải khách). Tất định, không random.
+const CANNED_REPLIES = [
+  "Dạ hôm nay có 1 thanh toán đang chờ anh/chị duyệt ở mục Thanh toán. Em mở giúp nhé?",
+  "Doanh thu hôm nay đang nhỉnh hơn hôm qua. Em có thể tổng hợp chi tiết theo sản phẩm nếu anh/chị cần ạ.",
+  "Em đã soạn sẵn mẫu tin chốt đơn: \"Dạ em xác nhận đơn của mình gồm… , tổng thanh toán… ạ\". Anh/chị muốn chỉnh gì không?",
+  "Em ghi nhận rồi ạ. Em sẽ áp dụng cho các hội thoại tương tự và báo lại anh/chị khi cần duyệt.",
+];
+
+type AgentChatContentProps = {
+  // Các nút điều khiển hiển thị ở góc phải header (vd nút Đóng, nút Tách màn). Tùy ngữ cảnh render.
+  headerActions?: ReactNode;
+};
+
+export function AgentChatContent({ headerActions }: AgentChatContentProps) {
+  const draft = useUiStore((s) => s.agentChatDraft);
+  const { name: agentName, pronoun, avatar, tone, bannedWords, greeting: identityGreeting } = useAgentConfig((s) => s.config.identity);
+  const shopName = useAgentConfig((s) => s.config.shopName);
+  const shopType = useAgentConfig((s) => s.config.shopType);
+  const shopAddress = useAgentConfig((s) => s.config.shopAddress);
+  const shopPhone = useAgentConfig((s) => s.config.shopPhone);
+  const businessProfile = useAgentConfig((s) => s.config.businessProfile);
+  const agentEnabled = useAgentConfig((s) => s.config.agentEnabled);
+
+  // Chọn agent đang trò chuyện — mặc định Manager Agent (điều phối), kèm trợ lý của cửa hàng.
+  // Nhãn trợ lý là "Agent [Tên]" để khớp luồng test sau re-train (đổi agent trên header).
+  const AGENTS = [
+    { id: "manager", name: "Manager Agent", subtitle: "Điều phối các trợ lý của bạn", avatar: undefined as string | undefined },
+    { id: "assistant", name: `Agent ${agentName}`, subtitle: agentEnabled ? "Trợ lý của bạn · đang trực" : "Trợ lý của bạn · đang tắt", avatar },
+  ] as const;
+  const [agentId, setAgentId] = useState<string>("manager");
+  const active = AGENTS.find((a) => a.id === agentId) ?? AGENTS[0];
+
+  // Có lần đẩy draft mới (vd "Train with Manager" từ M6) → chuyển về Manager Agent. Chỉnh state khi prop đổi, không effect.
+  const [seenDraftNonce, setSeenDraftNonce] = useState(0);
+  if (draft && draft.nonce !== seenDraftNonce) {
+    setSeenDraftNonce(draft.nonce);
+    setAgentId("manager");
+  }
+
+  // Lời chào theo agent: Manager = copilot của chủ shop; trợ lý = lời chào khách (để test).
+  const greetingFor = (id: string) =>
+    id === "manager"
+      ? `Dạ ${pronoun || "em"} chào anh/chị, ${pronoun || "em"} là ${agentName} — trợ lý của cửa hàng. Anh/chị cần ${pronoun || "em"} hỗ trợ gì ạ?`
+      : identityGreeting || `Dạ ${pronoun || "em"} chào anh/chị, ${pronoun || "em"} có thể tư vấn gì cho mình ạ?`;
+
+  const suggestions = [
+    "Hôm nay có việc gì cần mình xử lý?",
+    "Doanh thu hôm nay thế nào?",
+    "Soạn giúp tin nhắn chốt đơn",
+  ];
+
+  const [messages, setMessages] = useState<ChatMessage[]>([{ id: nextId(), role: "agent", text: greetingFor("manager") }]);
+  const [step, setStep] = useState(0);
+  const [typing, setTyping] = useState(false);
+  // Trạng thái kịch bản re-train: danh sách lượt, lượt hiện tại, có đang chờ user trả lời không, chip trả lời nhanh.
+  const [retrainTurns, setRetrainTurns] = useState<RetrainTurn[] | null>(null);
+  const [retrainIndex, setRetrainIndex] = useState(0);
+  const [awaitingAnswer, setAwaitingAnswer] = useState(false);
+  const [quickReplies, setQuickReplies] = useState<string[]>([]);
+
+  // Đổi agent (qua dropdown hoặc CTA test) → reset hội thoại về lời chào agent đó, xoá trạng thái re-train.
+  // Chỉnh state khi prop/đầu vào đổi ngay trong render (React pattern), không dùng effect.
+  const [prevAgentId, setPrevAgentId] = useState(agentId);
+  if (agentId !== prevAgentId) {
+    setPrevAgentId(agentId);
+    setMessages([{ id: nextId(), role: "agent", text: greetingFor(agentId) }]);
+    setStep(0);
+    setTyping(false);
+    setRetrainTurns(null);
+    setRetrainIndex(0);
+    setAwaitingAnswer(false);
+    setQuickReplies([]);
+  }
+
+  // Phát tuần tự các emission của một lượt kịch bản (typing → tin; tool: running → done), rồi mở câu hỏi/CTA.
+  const playTurn = (turn: RetrainTurn, isLast: boolean) => {
+    setTyping(true);
+    setQuickReplies([]);
+    let i = 0;
+    const run = () => {
+      if (i >= turn.emissions.length) {
+        setTyping(false);
+        if (turn.quickReplies && turn.quickReplies.length > 0) {
+          setQuickReplies(turn.quickReplies);
+          setAwaitingAnswer(!isLast); // lượt giữa = câu hỏi (chờ trả lời); lượt cuối = CTA test.
+        } else {
+          setAwaitingAnswer(false);
+        }
+        // Xong lượt cuối → kết thúc kịch bản (giữ chip CTA), cho phép /re-train lại lần sau.
+        if (isLast) setRetrainTurns(null);
+        return;
+      }
+      const e = turn.emissions[i];
+      i += 1;
+      if (e.kind === "tool") {
+        const id = nextId();
+        setMessages((m) => [
+          ...m,
+          { id, role: "tool", text: e.label, tool: { label: e.label, target: e.target, status: "running" } },
+        ]);
+        setTimeout(() => {
+          setMessages((m) =>
+            m.map((x) => (x.id === id && x.tool ? { ...x, tool: { ...x.tool, status: "done" } } : x)),
+          );
+          run();
+        }, STEP_DELAY);
+      } else {
+        setMessages((m) => [...m, { id: TYPING_ID, role: "typing", text: "" }]);
+        setTimeout(() => {
+          setMessages((m) => {
+            const base = m.filter((x) => x.id !== TYPING_ID);
+            return e.kind === "reasoning"
+              ? [...base, { id: nextId(), role: "reasoning", text: e.text, steps: e.steps }]
+              : [...base, { id: nextId(), role: "agent", text: e.text }];
+          });
+          run();
+        }, STEP_DELAY);
+      }
+    };
+    run();
+  };
+
+  const handleSend = async (text: string) => {
+    setQuickReplies([]);
+
+    // Đang trong re-train và chờ user trả lời → ghi câu trả lời rồi sang lượt sau.
+    if (retrainTurns && awaitingAnswer) {
+      setMessages((m) => [...m, { id: nextId(), role: "customer", text }]);
+      setAwaitingAnswer(false);
+      const next = retrainIndex + 1;
+      setRetrainIndex(next);
+      playTurn(retrainTurns[next], next === retrainTurns.length - 1);
+      return;
+    }
+
+    // Bắt đầu kịch bản re-train (chỉ với Manager Agent) khi gặp lệnh /re-train.
+    if (!retrainTurns && agentId === "manager" && RETRAIN_TRIGGER.test(text)) {
+      setMessages((m) => [...m, { id: nextId(), role: "customer", text }]);
+      const turns = buildRetrainFlow(agentName);
+      setRetrainTurns(turns);
+      setRetrainIndex(0);
+      playTurn(turns[0], turns.length === 1);
+      return;
+    }
+
+    // Mặc định: gọi model trả lời (dự phòng câu mẫu nếu API lỗi).
+    // Lịch sử hội thoại gửi cho model — bỏ greeting/typing/kịch bản, map sang role chuẩn.
+    const history = messages
+      .filter((m) => m.id !== TYPING_ID && (m.role === "agent" || m.role === "customer"))
+      .map((m) => ({ role: m.role === "agent" ? ("assistant" as const) : ("user" as const), text: m.text }));
+
+    setTyping(true);
+    setMessages((m) => [
+      ...m,
+      { id: nextId(), role: "customer", text },
+      { id: TYPING_ID, role: "typing", text: "" },
+    ]);
+
+    // Model có thể tách câu trả lời thành nhiều tin ngắn bằng dấu [NEXT] (xem SPLIT_RULE ở route).
+    // Phát từng tin tuần tự, kèm hiệu ứng "đang gõ" giữa các tin cho tự nhiên như nhắn tay.
+    const pushReply = (reply: string) => {
+      setStep((s) => s + 1);
+      const chunks = reply.split(/\n*\s*\[NEXT\]\s*\n*/i).map((c) => c.trim()).filter(Boolean);
+      const playChunk = (i: number) => {
+        if (i >= chunks.length) {
+          setTyping(false);
+          setMessages((m) => m.filter((x) => x.id !== TYPING_ID));
+          return;
+        }
+        setTyping(true);
+        setMessages((m) => (m.some((x) => x.id === TYPING_ID) ? m : [...m, { id: TYPING_ID, role: "typing", text: "" }]));
+        // Nhịp gõ theo độ dài tin (tối thiểu ~450ms, tối đa ~1300ms) — đỡ giật mà vẫn tự nhiên.
+        const delay = Math.min(1300, 450 + chunks[i].length * 10);
+        setTimeout(() => {
+          setMessages((m) => [...m.filter((x) => x.id !== TYPING_ID), { id: nextId(), role: "agent", text: chunks[i] }]);
+          playChunk(i + 1);
+        }, delay);
+      };
+      playChunk(0);
+    };
+
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: [...history.map((h) => ({ role: h.role, content: h.text })), { role: "user", content: text }],
+          // persona quyết định system prompt: Manager = copilot chủ shop; assistant = tư vấn viên đọc hồ sơ định nghĩa.
+          agent: {
+            name: agentName,
+            pronoun,
+            tone,
+            shopName,
+            shopType,
+            shopAddress,
+            shopPhone,
+            bannedWords,
+            businessProfile,
+            persona: agentId === "assistant" ? "assistant" : "manager",
+          },
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.reply) throw new Error(data.error || "Lỗi gọi API");
+      pushReply(data.reply);
+    } catch {
+      // Dự phòng: nếu API lỗi (chưa có key, hết quota…) thì dùng câu trả lời mẫu để luồng không gãy.
+      pushReply(CANNED_REPLIES[step % CANNED_REPLIES.length]);
+    }
+  };
+
+  // Bấm chip trả lời nhanh: CTA "Chat thử…" → chuyển sang trợ lý để test; còn lại = trả lời câu hỏi.
+  const handleQuickReply = (text: string) => {
+    if (text === retrainCtaLabel(agentName)) {
+      setQuickReplies([]);
+      setAgentId("assistant");
+      return;
+    }
+    void handleSend(text);
+  };
+
+  const showSuggestions = agentId === "manager" && messages.length <= 1 && quickReplies.length === 0 && !typing;
+
+  return (
+    <div className="flex h-full w-full flex-col">
+      {/* Header */}
+      <div className="flex h-14 shrink-0 items-center gap-3 border-b px-4">
+        <span className="relative shrink-0">
+          <AgentAvatar name={active.name} src={active.avatar} size={36} className="ring-1 ring-foreground/10" />
+          <span
+            className={cn(
+              "absolute -bottom-0.5 -right-0.5 size-3 rounded-full border-2 border-card",
+              agentEnabled ? "bg-emerald-500" : "bg-muted-foreground",
+            )}
+            aria-hidden
+          />
+        </span>
+        <div className="min-w-0 flex-1">
+          {/* Dropdown chọn agent — đổi danh tính đang trò chuyện */}
+          <Select value={agentId} onValueChange={(v) => setAgentId(v ?? "manager")}>
+            <SelectTrigger
+              aria-label="Chọn agent"
+              className="h-auto gap-1 border-0 bg-transparent p-0 text-sm font-semibold leading-tight shadow-none hover:bg-transparent focus-visible:ring-0 dark:bg-transparent dark:hover:bg-transparent"
+            >
+              <span className="truncate">{active.name}</span>
+            </SelectTrigger>
+            <SelectContent align="start" className="min-w-48">
+              {AGENTS.map((a) => (
+                <SelectItem key={a.id} value={a.id}>
+                  {a.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="truncate text-xs text-muted-foreground">{active.subtitle}</p>
+        </div>
+        {headerActions ? <div className="flex shrink-0 items-center gap-0.5">{headerActions}</div> : null}
+      </div>
+
+      {/* Chat */}
+      <div className="min-h-0 flex-1">
+        <ChatWindow
+          messages={messages}
+          onSend={handleSend}
+          disabled={typing}
+          ownRole="customer"
+          placeholder={`Nhắn cho ${active.name}…`}
+          draft={draft}
+          quickReplies={quickReplies}
+          onQuickReply={handleQuickReply}
+          header={
+            showSuggestions ? (
+              <div className="flex flex-wrap gap-1.5 border-b bg-muted/40 px-3 py-2">
+                {suggestions.map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => handleSend(s)}
+                    disabled={typing}
+                    className="rounded-full border border-dashed px-2.5 py-1 text-xs text-muted-foreground/70 transition-colors hover:border-solid hover:bg-background hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            ) : null
+          }
+        />
+      </div>
+    </div>
+  );
+}

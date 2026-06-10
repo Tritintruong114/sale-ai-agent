@@ -33,21 +33,21 @@ export function PaymentBreakdown({ queue }: { queue: Payment[] }) {
         <div className="space-y-4 rounded-xl bg-card p-4 ring-1 ring-foreground/10">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-xs text-muted-foreground">Đã thu</p>
+              <p className="text-xs text-muted-foreground">Đã thanh toán</p>
               <p className="text-2xl font-semibold tabular-nums text-emerald-600">{formatVND(collected)}</p>
             </div>
             <div className="min-w-0 text-right">
-              <p className="text-xs text-muted-foreground">Còn phải thu</p>
+              <p className="text-xs text-muted-foreground">Chưa thanh toán</p>
               <p className="text-lg font-semibold tabular-nums text-orange-600">{formatVND(outstanding)}</p>
             </div>
           </div>
-          {/* Tỉ lệ thu — phần emerald trên nền orange (còn phải thu). Màu kèm nhãn chữ %. */}
+          {/* Tỉ lệ thanh toán — phần emerald trên nền orange (chưa thanh toán). Màu kèm nhãn chữ %. */}
           <div>
-            <div className="flex h-2.5 overflow-hidden rounded-full bg-orange-100" role="img" aria-label={`Đã thu ${rate}% trên tổng cần thu`}>
+            <div className="flex h-2.5 overflow-hidden rounded-full bg-orange-100" role="img" aria-label={`Đã thanh toán ${rate}% trên tổng`}>
               <div className="bg-emerald-500 transition-[width] duration-300" style={{ width: `${rate}%` }} />
             </div>
             <div className="mt-1 flex justify-between text-[11px] text-muted-foreground">
-              <span className="tabular-nums font-medium text-emerald-600">{rate}% đã thu</span>
+              <span className="tabular-nums font-medium text-emerald-600">{rate}% đã thanh toán</span>
               <span className="tabular-nums">Tổng {formatVND(relevant)}</span>
             </div>
           </div>

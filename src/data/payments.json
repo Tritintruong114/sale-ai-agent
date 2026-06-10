@@ -1,5 +1,5 @@
 {
-  "_note": "M5 Thanh toán (HITL). orderId trỏ orders.json (channel/createdAt join từ đó để bảng + cross-link chạy). status ∈ awaiting|paid. needsApproval=true cho đơn lớn/hoàn tiền cần chủ shop duyệt trước khi agent gửi QR — đúng 1 mục khớp PENDING_COUNTS.payments=1. Không có bước tạo link: duyệt xong (hoặc không cần duyệt) → trạng thái 'Đã gửi QR', chờ khách trả → 'Đã thanh toán'.",
+  "_note": "M5 Thanh toán (HITL). orderId trỏ orders.json (channel/createdAt join từ đó để bảng + cross-link chạy). status ∈ awaiting|paid. needsApproval=true cho khoản cần chủ shop xác nhận (vd giảm giá vượt mức) trước khi agent gửi QR — đúng 1 mục khớp PENDING_COUNTS.payments=1. Không có bước tạo link: duyệt xong (hoặc không cần duyệt) → trạng thái 'Đã gửi QR', chờ khách trả → 'Đã thanh toán'.",
   "queue": [
     {
       "id": "pay-001",
@@ -9,7 +9,7 @@
       "amount": 640000,
       "status": "awaiting",
       "needsApproval": true,
-      "reason": "Đơn lớn vượt ngưỡng tự chốt — cần chủ shop duyệt trước khi gửi QR",
+      "reason": "Đơn được giảm giá vượt mức agent tự duyệt — cần bạn xác nhận số tiền trước khi gửi QR.",
       "createdAt": "2026-06-09T09:42:00+07:00"
     },
     {

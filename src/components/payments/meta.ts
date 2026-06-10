@@ -109,16 +109,16 @@ function shiftIso(iso: string, addMin: number): string {
 // Diễn biến khoản thu — suy tất định từ (createdAt, needsApproval, gate, status). Mới nhất KHÔNG đảo ở đây;
 // panel tự sắp khi render (đồng bộ OrderDetailPanel). Mốc giờ giả lập bằng offset cố định từ createdAt.
 export function paymentTimeline(p: Payment): TimelineEvent[] {
-  const events: TimelineEvent[] = [{ at: p.createdAt, label: "Agent tạo khoản thu", tone: "sky" }];
+  const events: TimelineEvent[] = [{ at: p.createdAt, label: "Agent tạo khoản thanh toán", tone: "sky" }];
   const state = payState(p);
 
   if (p.needsApproval) {
     if (p.gate === "pending") {
-      events.push({ at: shiftIso(p.createdAt, 1), label: "Chờ bạn duyệt (đơn lớn / hoàn tiền)", tone: "amber" });
+      events.push({ at: shiftIso(p.createdAt, 1), label: "Chờ bạn duyệt khoản thanh toán", tone: "amber" });
     } else if (p.gate === "approved") {
-      events.push({ at: shiftIso(p.createdAt, 6), label: "Bạn đã duyệt khoản thu", tone: "sky" });
+      events.push({ at: shiftIso(p.createdAt, 6), label: "Bạn đã duyệt khoản thanh toán", tone: "sky" });
     } else {
-      events.push({ at: shiftIso(p.createdAt, 6), label: "Bạn đã từ chối khoản thu", tone: "rose" });
+      events.push({ at: shiftIso(p.createdAt, 6), label: "Bạn đã từ chối khoản thanh toán", tone: "rose" });
     }
   }
   if (state === "sent" || state === "paid") {
@@ -130,13 +130,14 @@ export function paymentTimeline(p: Payment): TimelineEvent[] {
   return events;
 }
 
-// Icon mốc timeline khoản thu suy từ nhãn (tất định, không lưu icon trong data — như orders/timelineIcon).
+// Icon mốc timeline khoản thanh toán suy từ nhãn (tất định, không lưu icon trong data — như orders/timelineIcon).
+// Dò token cụ thể (QR/từ chối/duyệt/tạo) TRƯỚC "thanh toán" vì nhãn nào cũng chứa "khoản thanh toán".
 export function paymentTimelineIcon(label: string): LucideIcon {
-  if (label.includes("thanh toán")) return Check;
   if (label.includes("QR")) return QrCode;
-  if (label.includes("duyệt")) return ShieldQuestion;
   if (label.includes("từ chối")) return X;
+  if (label.includes("duyệt")) return ShieldQuestion;
   if (label.includes("tạo")) return Sparkles;
+  if (label.includes("thanh toán")) return Check; // "Khách đã thanh toán"
   return CreditCard;
 }
 

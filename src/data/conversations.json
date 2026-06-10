@@ -32,7 +32,7 @@
         { "id": "m-002-1", "role": "customer", "text": "Cho mình 1 giỏ quà trái cây tặng bạn với ạ" },
         { "id": "m-002-2", "role": "agent", "text": "Dạ bên em có Giỏ Tinh Khôi 550.000đ, tông trắng xanh thanh khiết ạ. Thêm 1kg Xoài nữa là tổng 640.000đ. Mình lấy combo này nhé?" },
         { "id": "m-002-3", "role": "customer", "text": "Ừ mình lấy, ship về Quận 7 nha" },
-        { "id": "m-002-4", "role": "system", "text": "Cần người: Khách muốn mua (dấu hiệu chốt đơn) — đơn 640.000đ vượt ngưỡng tự chốt" }
+        { "id": "m-002-4", "role": "system", "text": "Cần người: Khách muốn mua (dấu hiệu chốt đơn) — đơn 640.000đ cần bạn duyệt" }
       ]
     },
     {

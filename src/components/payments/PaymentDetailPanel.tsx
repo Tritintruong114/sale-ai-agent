@@ -109,7 +109,7 @@ export function PaymentDetailPanel({
             {payment.orderId} · {channelTitle(payment.channel)} · {dateTime(payment.createdAt)}
           </p>
         </div>
-        <Button variant="ghost" size="icon-sm" className="-mr-1 -mt-1" onClick={onClose} aria-label="Đóng chi tiết khoản thu">
+        <Button variant="ghost" size="icon-sm" className="-mr-1 -mt-1" onClick={onClose} aria-label="Đóng chi tiết khoản thanh toán">
           <X />
         </Button>
       </div>
@@ -117,7 +117,7 @@ export function PaymentDetailPanel({
       <div className="min-h-0 flex-1 space-y-5 overflow-auto p-4">
         {/* Số tiền */}
         <div className="flex items-baseline justify-between rounded-lg bg-muted/50 px-3 py-2.5">
-          <span className="text-sm text-muted-foreground">Số tiền cần thu</span>
+          <span className="text-sm text-muted-foreground">Số tiền cần thanh toán</span>
           <span className="text-lg font-semibold tabular-nums">{formatVND(payment.amount)}</span>
         </div>
 
@@ -126,7 +126,7 @@ export function PaymentDetailPanel({
           <div className="space-y-2 rounded-lg bg-amber-50 px-3 py-2.5 ring-1 ring-amber-200">
             <p className="flex items-start gap-2 text-xs text-amber-800">
               <ShieldQuestion className="mt-0.5 size-3.5 shrink-0 text-amber-600" aria-hidden />
-              {payment.reason ?? "Khâu nhạy cảm — cần bạn duyệt trước khi agent gửi QR."}
+              {payment.reason ?? "Khoản này cần bạn duyệt trước khi agent gửi QR cho khách."}
             </p>
             <div className="flex gap-2">
               <Button size="sm" className="flex-1" onClick={() => onApprove(payment.id)}>
@@ -143,7 +143,7 @@ export function PaymentDetailPanel({
 
         {/* Nội dung QR — khi đã gửi (chờ khách trả) hoặc đã thu */}
         {showQr ? (
-          <Section title="Mã QR chuyển khoản agent đã gửi">
+          <Section title="Mã QR chuyển khoản đã gửi">
             <div className="flex flex-col items-center gap-3 rounded-lg border border-foreground/10 bg-card p-3">
               <QrGlyph seed={`${payment.id}-${payment.orderId}-${payment.amount}`} />
               <div className="w-full space-y-1.5 border-t pt-3">
@@ -164,7 +164,7 @@ export function PaymentDetailPanel({
         ) : null}
 
         {/* Timeline log */}
-        <Section title="Diễn biến khoản thu">
+        <Section title="Diễn biến thanh toán">
           <ol className="relative space-y-3.5 before:absolute before:bottom-2 before:left-[15px] before:top-2 before:w-px before:bg-border">
             {events.map((ev, i) => {
               const Icon = paymentTimelineIcon(ev.label);

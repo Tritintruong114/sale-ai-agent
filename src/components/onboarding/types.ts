@@ -2,7 +2,7 @@ import type { AgentConfig } from "@/data/config";
 import type { DraftProduct } from "@/data/onboarding";
 
 // Bản nháp onboarding — gom giá trị từng bước, commit vào agentConfigStore khi hoàn tất.
-// Các config còn lại (ngưỡng tự chốt, hand-off, BYOK, kênh báo…) dùng mặc định, chỉnh ở M6 sau.
+// Các config còn lại (hand-off, BYOK, kênh báo…) dùng mặc định, chỉnh ở M6 sau.
 export type OnboardingDraft = {
   shopName: string;
   shopType: AgentConfig["shopType"];

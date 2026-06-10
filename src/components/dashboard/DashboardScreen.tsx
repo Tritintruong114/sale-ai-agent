@@ -33,8 +33,8 @@ export type DashboardData = typeof defaultData;
 
 const TODO_ITEMS = [
   { key: "handoff" as const, label: "Hội thoại cần người", hint: "Agent đã chuyển cho bạn", href: "/inbox", icon: Inbox },
-  { key: "bigOrders" as const, label: "Đơn lớn chờ duyệt", hint: "Vượt ngưỡng tự chốt", href: "/orders", icon: ShoppingCart },
-  { key: "payments" as const, label: "Thanh toán chờ duyệt", hint: "Khâu nhạy cảm cần bạn duyệt", href: "/payments", icon: CreditCard },
+  { key: "bigOrders" as const, label: "Đơn cần duyệt", hint: "Agent cần bạn xác nhận trước khi chốt", href: "/orders", icon: ShoppingCart },
+  { key: "payments" as const, label: "Thanh toán cần duyệt", hint: "Agent cần bạn xác nhận trước khi thu", href: "/payments", icon: CreditCard },
 ];
 
 // Mỗi KPI một icon + tint chip riêng để quét nhanh (màu chỉ hỗ trợ, nhãn vẫn là chính).
@@ -182,7 +182,7 @@ export function DashboardScreen({ data = defaultData, live = false }: { data?: D
             <SectionEmpty
               icon={Inbox}
               title="Chưa có việc nào cần bạn"
-              description="Agent đang tự xử lý hội thoại. Gặp ca cần bạn — chuyển máy, đơn lớn, thanh toán — nó sẽ đưa lên đây."
+              description="Agent đang tự xử lý hội thoại. Gặp ca cần bạn — nhường bạn trả lời, duyệt đơn hay thanh toán — agent sẽ đưa lên đây."
             />
           )
         ) : (
@@ -415,14 +415,14 @@ export function DashboardScreen({ data = defaultData, live = false }: { data?: D
         <Card size="sm" className="lg:col-span-2">
           <CardHeader>
             <CardTitle>Hội thoại đáng chú ý</CardTitle>
-            <CardDescription>Trường hợp nên xem lại trong hôm nay</CardDescription>
+            <CardDescription>Những ca nên xem lại hôm nay</CardDescription>
           </CardHeader>
           <CardContent className="space-y-1">
             {data.notableConversations.length === 0 ? (
               <SectionEmpty
                 icon={MessageSquare}
                 title="Chưa có hội thoại nào đáng chú ý"
-                description="Agent sẽ ghim các ca cần xem lại — đơn lớn, khiếu nại, khách trả giá — ngay khi xuất hiện."
+                description="Agent sẽ ghim các ca cần xem lại — khiếu nại, khách trả giá, đơn cần duyệt — ngay khi xuất hiện."
               />
             ) : null}
             {data.notableConversations.map((c) => (

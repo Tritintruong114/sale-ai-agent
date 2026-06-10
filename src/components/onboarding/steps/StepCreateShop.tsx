@@ -22,7 +22,7 @@ export function StepCreateShop({ draft, update }: StepProps) {
         <Input
           value={draft.shopName}
           onChange={(e) => update({ shopName: e.target.value })}
-          placeholder="vd: Shop Mỹ Phẩm An An"
+          placeholder="vd: Shop Trái Cây An An"
           autoFocus
         />
       </label>

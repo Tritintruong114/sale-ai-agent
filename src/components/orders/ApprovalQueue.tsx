@@ -5,20 +5,17 @@ import { Check, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DismissibleBanner } from "@/components/ui/dismissible-banner";
 import { TopbarBannerSlot } from "@/components/shell/TopbarBannerSlot";
-import { formatVND } from "@/lib/format";
 import { type Order } from "./meta";
 
-// Zone HITL §6.7 — ribbon dưới topbar (dán sát, full-width, dense) tóm tắt số đơn lớn cần chủ shop duyệt.
+// Zone HITL §6.7 — ribbon dưới topbar (dán sát, full-width, dense) tóm tắt số đơn cần chủ shop duyệt.
 // "Xem" lọc danh sách chính về các đơn chờ duyệt. Hết việc → banner emerald (ẩn được).
 
 export function ApprovalQueue({
   pending,
-  threshold,
   onView,
   viewing = false,
 }: {
   pending: Order[];
-  threshold: number;
   onView: () => void;
   viewing?: boolean;
 }) {
@@ -72,8 +69,8 @@ export function ApprovalQueue({
           )
         }
       >
-        <span className="font-semibold text-amber-900">{pending.length} đơn lớn chờ bạn duyệt</span>
-        <span className="text-amber-800"> — đơn từ {formatVND(threshold)} trở lên, agent không tự chốt.</span>
+        <span className="font-semibold text-amber-900">{pending.length} đơn chờ bạn duyệt</span>
+        <span className="text-amber-800"> — agent đã chuyển để bạn xác nhận trước khi xử lý.</span>
       </DismissibleBanner>
     </TopbarBannerSlot>
   );

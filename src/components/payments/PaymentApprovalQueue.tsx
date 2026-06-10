@@ -39,7 +39,7 @@ export function PaymentApprovalQueue({
           className="rounded-t-none rounded-b-lg"
           onDismiss={() => setDoneDismissed(true)}
         >
-          Không còn khoản nào chờ bạn duyệt — agent đang tự gửi QR thu tiền.
+          Không còn khoản nào chờ bạn duyệt — agent đang tự gửi QR cho khách thanh toán.
         </DismissibleBanner>
       </TopbarBannerSlot>
     );
@@ -70,7 +70,7 @@ export function PaymentApprovalQueue({
         }
       >
         <span className="font-semibold text-amber-900">{pending.length} khoản chờ bạn duyệt</span>
-        <span className="text-amber-800"> — đơn lớn / hoàn tiền, agent không tự gửi QR.</span>
+        <span className="text-amber-800"> — khoản cần bạn xác nhận trước khi agent gửi QR.</span>
       </DismissibleBanner>
     </TopbarBannerSlot>
   );

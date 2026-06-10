@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import type { AgentConfigTab } from "@/components/agent-config/sections";
+import { useSetupStore } from "@/store/setupStore";
 
 // Trạng thái khung ứng dụng — SideNav: thu gọn trên desktop + drawer trên mobile.
 type UiState = {
@@ -14,6 +15,9 @@ type UiState = {
   agentChatOpen: boolean;
   setAgentChatOpen: (open: boolean) => void;
   toggleAgentChat: () => void;
+  // Tách màn chat ra cửa sổ nổi (iframe load route /agent-chat) thay cho side panel.
+  agentChatPopped: boolean;
+  setAgentChatPopped: (popped: boolean) => void;
   // Tin nhắn soạn sẵn đẩy vào ô nhập khi mở panel (vd "Train with Manager" từ M6).
   // nonce tăng mỗi lần đẩy để Composer/Panel nhận biết lần đẩy mới (kể cả cùng nội dung) mà không cần effect.
   agentChatDraft: { text: string; nonce: number } | null;
@@ -31,6 +35,11 @@ type UiState = {
   // Nhóm cấu hình Agent (M6) — composite list trên topbar điều khiển panel đang xem.
   agentConfigTab: AgentConfigTab;
   setAgentConfigTab: (tab: AgentConfigTab) => void;
+  // Tour hướng dẫn: id tour đang chờ chạy (đặt từ Onboarding / nút "Xem hướng dẫn"),
+  // TourLauncher trong AppTour đọc cờ này rồi gọi start() và xoá cờ.
+  pendingTourId: string | null;
+  requestTour: (id: string) => void;
+  clearPendingTour: () => void;
 };
 
 export const useUiStore = create<UiState>((set) => ({
@@ -40,8 +49,14 @@ export const useUiStore = create<UiState>((set) => ({
   setMobileOpen: (open) => set({ mobileOpen: open }),
   toggleMobile: () => set((s) => ({ mobileOpen: !s.mobileOpen })),
   agentChatOpen: false,
-  setAgentChatOpen: (open) => set({ agentChatOpen: open }),
+  setAgentChatOpen: (open) => {
+    // Mở chat = đã "test thử với agent" — tick bước checklist "Bắt đầu nhanh".
+    if (open) useSetupStore.getState().markAgentTested();
+    set({ agentChatOpen: open });
+  },
   toggleAgentChat: () => set((s) => ({ agentChatOpen: !s.agentChatOpen })),
+  agentChatPopped: false,
+  setAgentChatPopped: (popped) => set({ agentChatPopped: popped }),
   agentChatDraft: null,
   pushAgentChatDraft: (text) => set((s) => ({ agentChatDraft: { text, nonce: (s.agentChatDraft?.nonce ?? 0) + 1 } })),
   ordersTab: "manage",
@@ -50,6 +65,9 @@ export const useUiStore = create<UiState>((set) => ({
   setProductsTab: (tab) => set({ productsTab: tab }),
   paymentsTab: "collect",
   setPaymentsTab: (tab) => set({ paymentsTab: tab }),
-  agentConfigTab: "learning",
+  agentConfigTab: "identity",
   setAgentConfigTab: (tab) => set({ agentConfigTab: tab }),
+  pendingTourId: null,
+  requestTour: (id) => set({ pendingTourId: id }),
+  clearPendingTour: () => set({ pendingTourId: null }),
 }));

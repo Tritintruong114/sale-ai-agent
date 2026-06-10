@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { MoMoIcon, SePayIcon, VNPayIcon } from "@/components/icons/payment";
+import { useSetupStore } from "@/store/setupStore";
 
 // Tab Cài đặt (M5 §6.14) — cấu hình thu tiền của shop, tách khỏi luồng Chỉ số/Thu tiền:
 //   • Tự động tạo mã QR — agent tự sinh QR khi khách đặt hàng (mặc định bật).
@@ -104,12 +105,9 @@ function GatewayTile({
 export function PaymentSettings() {
   const [autoQr, setAutoQr] = useState(true);
   const [selected, setSelected] = useState<GatewayKey>("sepay");
-  // SePay nối sẵn (mặc định, demo); cổng khác nối qua mock OAuth.
-  const [connected, setConnected] = useState<Record<GatewayKey, boolean>>({
-    sepay: true,
-    vnpay: false,
-    momo: false,
-  });
+  // Trạng thái nối cổng sống ở setupStore (persist) để checklist "Bắt đầu nhanh" phản ánh đúng.
+  const connected = useSetupStore((s) => s.gateways);
+  const setGateway = useSetupStore((s) => s.setGateway);
   const [loadingKey, setLoadingKey] = useState<GatewayKey | null>(null);
 
   const active = GATEWAYS.find((g) => g.key === selected)!;
@@ -119,18 +117,18 @@ export function PaymentSettings() {
     setLoadingKey(selected);
     // Mock OAuth — nối xong sau 1.1s (đồng bộ cách ChannelsScreen giả lập).
     setTimeout(() => {
-      setConnected((c) => ({ ...c, [selected]: true }));
+      setGateway(selected, true);
       setLoadingKey(null);
     }, 1100);
   };
 
-  const disconnect = () => setConnected((c) => ({ ...c, [selected]: false }));
+  const disconnect = () => setGateway(selected, false);
 
   return (
     <div className="space-y-6">
       <header className="min-w-0">
         <p className="text-xs text-muted-foreground sm:text-sm">
-          Cấu hình cách agent thu tiền — bật tự tạo QR và chọn cổng thanh toán nhận tiền.
+          Cấu hình cách agent nhận thanh toán — bật tự tạo QR và chọn cổng thanh toán.
         </p>
         <h1 className="text-pretty text-base font-semibold sm:text-lg">Cài đặt thanh toán</h1>
       </header>
@@ -144,7 +142,7 @@ export function PaymentSettings() {
           <div className="min-w-0">
             <p className="font-medium">Tự động tạo mã QR</p>
             <p className="mt-0.5 text-sm text-muted-foreground">
-              Cho phép AI Agent tự động tạo mã QR thanh toán khi khách đặt hàng
+              Agent tự tạo mã QR thanh toán ngay khi khách đặt hàng
             </p>
           </div>
         </div>
@@ -164,7 +162,7 @@ export function PaymentSettings() {
           </span>
           <div className="min-w-0">
             <p className="font-medium">Chọn cổng thanh toán</p>
-            <p className="mt-0.5 text-sm text-muted-foreground">Chọn phương thức thanh toán để cấu hình</p>
+            <p className="mt-0.5 text-sm text-muted-foreground">Kết nối cổng để nhận tiền khi khách thanh toán</p>
           </div>
         </div>
 
@@ -174,7 +172,7 @@ export function PaymentSettings() {
               key={g.key}
               gateway={g}
               selected={selected === g.key}
-              connected={connected[g.key]}
+              connected={!!connected[g.key]}
               loading={loadingKey === g.key}
               onSelect={() => setSelected(g.key)}
             />

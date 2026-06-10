@@ -19,6 +19,8 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { DEFAULT_CONFIG } from "@/data/config";
 import { useAgentConfig } from "@/store/agentConfigStore";
+import { useUiStore } from "@/store/uiStore";
+import { useSetupStore } from "@/store/setupStore";
 import { Stepper } from "./Stepper";
 import { StepHeader } from "./StepHeader";
 import { ProvisioningScreen } from "./ProvisioningScreen";
@@ -83,19 +85,21 @@ const STEPS: StepDef[] = [
   },
 ];
 
-// Data mẫu điền sẵn cho cả 4 bước (demo nhanh — nhất quán shop mỹ phẩm).
+// Data mẫu điền sẵn cho cả 4 bước (demo nhanh — nhất quán shop trái cây).
 const INITIAL_DRAFT: OnboardingDraft = {
-  shopName: "Shop Mỹ Phẩm An An",
+  shopName: "Shop Trái Cây An An",
   shopType: [],
   shopAddress: "182 Lê Đại Hành, Quận 11, TP.HCM",
   shopPhone: "0385 611 407",
   identity: DEFAULT_CONFIG.identity,
   products: SAMPLE_SUGGESTED_PRODUCTS,
-  channels: { fbConnected: true, zaloConnected: false, pageName: "Shop Mỹ Phẩm An An" },
+  channels: { fbConnected: true, zaloConnected: false, pageName: "Shop Trái Cây An An" },
 };
 
 export function OnboardingWizard() {
   const setConfig = useAgentConfig((s) => s.setConfig);
+  const requestTour = useUiStore((s) => s.requestTour);
+  const resetSetup = useSetupStore((s) => s.reset);
   const [draft, setDraft] = useState<OnboardingDraft>(INITIAL_DRAFT);
   const [index, setIndex] = useState(0);
   const [phase, setPhase] = useState<Phase>("wizard");
@@ -169,7 +173,14 @@ export function OnboardingWizard() {
                 pronoun={draft.identity.pronoun}
                 product={draft.products[0]}
               />
-              <Link href="/dashboard" className={buttonVariants({ size: "lg", className: "w-full" })}>
+              <Link
+                href="/dashboard"
+                onClick={() => {
+                  resetSetup();
+                  requestTour("guide");
+                }}
+                className={buttonVariants({ size: "lg", className: "w-full" })}
+              >
                 Vào Dashboard
               </Link>
             </div>
@@ -212,7 +223,14 @@ export function OnboardingWizard() {
                 <MessageSquare className="size-4" aria-hidden />
                 Chat thử
               </Button>
-              <Link href="/dashboard" className={buttonVariants({ size: "lg", className: "w-full" })}>
+              <Link
+                href="/dashboard"
+                onClick={() => {
+                  resetSetup();
+                  requestTour("guide");
+                }}
+                className={buttonVariants({ size: "lg", className: "w-full" })}
+              >
                 Vào Dashboard
               </Link>
             </div>

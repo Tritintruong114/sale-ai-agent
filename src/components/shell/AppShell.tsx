@@ -1,4 +1,5 @@
 import { AgentChatPanel } from "./AgentChatPanel";
+import { AgentChatPopout } from "./AgentChatPopout";
 import { MobileScrim } from "./MobileScrim";
 import { SideNav } from "./SideNav";
 import { TopBar } from "./TopBar";
@@ -15,6 +16,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </div>
       {/* Side panel chat — trượt từ phải, mở từ nút "Talk to Agent" trên TopBar */}
       <AgentChatPanel />
+      {/* Cửa sổ nổi (iframe) khi tách màn chat ra khỏi panel */}
+      <AgentChatPopout />
     </div>
   );
 }
