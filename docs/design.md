@@ -20,6 +20,7 @@ Nguồn (single source of truth là mã, không phải tài liệu):
 3. **Trung tính làm nền, màu làm tín hiệu** — hệ semantic là thang xám (chroma = 0); điểm nhấn đến từ palette trạng thái.
 4. **Tất định** — không phụ thuộc `now`/random ở render (tránh lệch hydrate); thời gian cắt thẳng từ chuỗi ISO.
 5. **Mock-driven** — màn đọc `@/data/*.json`, thay đổi là state client.
+6. **Tối giản-cao cấp (premium-minimal)** — một điểm nhấn là đủ: ưu tiên **một chấm/đường primary** cho thứ cần chú ý thay vì nhiều mảng nền tint; widget phụ (vd checklist) dồn về **khối nhỏ một-hàng**, hint đẩy sang tooltip, không thẻ nổi to. Density gọn nhưng nhiều khoảng thở — "ít mà tinh" hơn "đầy mà ồn".
 
 ---
 
@@ -250,6 +251,20 @@ Danh sách nhiều bản ghi cần quét/so sánh nhanh dùng `<table>` thật (
 - **Phân trang**: footer dính đáy container (`shrink-0 border-t`) dùng `Pagination` ([pagination.tsx](../src/components/ui/pagination.tsx)); về trang 1 khi đổi lọc/tìm/sắp xếp.
 - **Rỗng**: empty state §6.6 thay cho bảng trống.
 
+### 6.13 Tour hướng dẫn (onboarding tour)
+Đi qua các màn cho người mới sau Onboarding. Component [tour.tsx](../src/components/ui/tour.tsx) (shadcn `@tour/tour` — **đã chuyển từ Radix popover sang định vị thủ công** vì project dùng base-ui popover), bọc qua [AppTour](../src/components/tour/AppTour.tsx) trong [(app)/layout](../src/app/(app)/layout.tsx).
+- **Spotlight**: SVG mask khoét lỗ quanh target + viền `stroke-primary`; thẻ nội dung đặt cạnh (mặc định bên phải). Target chọn qua `data-tour-step-id` (match kiểu *contains*).
+- **Tour qua nhiều màn**: neo vào **mục SideNav** (luôn mounted ở mọi route) qua `nav.tour` slug; `nextRoute`/`previousRoute` đổi nội dung `<main>` phía sau trong khi spotlight di chuyển xuống nav. Bền hơn nhiều so với neo vào element trong thân trang (đổi route là mất).
+- **Khởi động**: cờ `pendingTourId` ở `useUiStore` (đặt từ Onboarding "Vào Dashboard" hoặc nút "Xem hướng dẫn" cuối SideNav) → `TourLauncher` trong AppTour gọi `start()`.
+- **Nội dung**: nhãn tiếng Việt (Tiếp / Quay lại / Xong, "Bước X / Y"); mỗi màn một câu **giá trị người dùng** + bộ tên thực thể chuẩn (copy-writer convention), không gọi agent là "nó".
+
+### 6.14 Setup checklist (mini-panel "Thiết lập") — [SetupChecklist](../src/components/shell/SetupChecklist.tsx)
+3 việc khởi đầu để shop chạy được sau Onboarding, đặt cuối SideNav (ẩn khi `collapsed`). Áp **§1.6 premium-minimal**:
+- **Khối gọn**: `rounded-lg ring-1 ring-foreground/10 px-2 py-1.5`; hàng đầu gộp nhãn "THIẾT LẬP" + **thanh tiến trình mảnh** (`h-1`, fill bằng `transform: scaleX(done/total)` — không animate width, không reflow) + `x/total` + nút ẩn.
+- **Mỗi bước một hàng**: chấm `size-1.5` (chưa xong) / `Check` emerald (xong); **bước kế tiếp** chỉ đậm chữ + chấm primary + `ChevronRight` mờ; hint đẩy sang `title` (tooltip) — không thẻ nổi, không nền tint to. Phân cấp: việc cần làm nổi, việc xong mờ, việc sau trung tính.
+- **Trạng thái "xong" suy từ state thật**, không cờ giả: có sản phẩm (`products.json.catalog`), đã nối cổng (`useSetupStore.gateways`), đã chat thử (`useSetupStore.agentTested` — set khi mở chat ở `useUiStore.setAgentChatOpen`).
+- Xong cả 3 → **một hàng ghi nhận** ("Shop đã sẵn sàng bán hàng.") rồi tự ẩn sau 4s. Dismiss + reset (sau Onboarding / "Chạy lại Onboarding") ở `useSetupStore`.
+
 ---
 
 ## 7. Spacing & kích thước chuẩn
@@ -290,7 +305,7 @@ Danh sách nhiều bản ghi cần quét/so sánh nhanh dùng `<table>` thật (
 
 ## 10. State management
 
-- **Zustand stores** ([@/store](../src/store)): `useUiStore` (sidebar collapse/mobile), `useAgentConfig` (cấu hình shop/agent), …
+- **Zustand stores** ([@/store](../src/store)): `useUiStore` (sidebar collapse/mobile, `pendingTourId` khởi động tour §6.13), `useAgentConfig` (cấu hình shop/agent), `useSetupStore` (**persist** localStorage — trạng thái nối cổng + tiến độ checklist §6.14: `gateways`/`agentTested`/`dismissed`), …
 - Dữ liệu màn: mock JSON trong [@/data](../src/data); tương tác là state cục bộ (`useState`) hoặc store.
 - **Phản ánh URL**: điều hướng phụ trong màn (tab/segment, đơn đang mở) đồng bộ hai chiều với query (`?tab=`, `?o=` — xem §6.11) — deep-link mở đúng trạng thái, thao tác cập nhật thanh địa chỉ qua `router.replace`.
 - `cn()` ([@/lib/utils](../src/lib/utils)) gộp class; helper format ở [@/lib/format](../src/lib/format) (`formatVND`, …).
