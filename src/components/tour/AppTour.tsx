@@ -23,7 +23,7 @@ const GUIDE_TOUR: Tour = {
       id: "nav-inbox",
       title: "Inbox hội thoại",
       content:
-        "Tất cả hội thoại agent đang trò chuyện với khách đều nằm ở đây. Khi thấy nhãn “Cần bạn trả lời”, đó là lúc agent nhường để bạn trực tiếp nói với khách.",
+        "Tất cả hội thoại agent đang trò chuyện với khách.",
       side: "right",
       previousRoute: "/dashboard",
       previousLabel: "Quay lại",
@@ -34,7 +34,7 @@ const GUIDE_TOUR: Tour = {
       id: "nav-orders",
       title: "Quản lý đơn",
       content:
-        "Mọi đơn agent tạo từ hội thoại với khách đều ở đây. Những đơn gắn nhãn “Đơn cần duyệt” đang chờ bạn xác nhận trước khi chốt.",
+        "Mọi đơn agent tạo từ hội thoại với khách đều ở đây.",
       side: "right",
       previousRoute: "/inbox",
       previousLabel: "Quay lại",
@@ -45,7 +45,7 @@ const GUIDE_TOUR: Tour = {
       id: "nav-products",
       title: "Sản phẩm",
       content:
-        "Đây là nguồn hàng agent dựa vào để tư vấn và báo giá cho khách. Bạn cập nhật sản phẩm và giá ở đây, agent sẽ trả lời khách theo đúng như vậy.",
+        "Đây là nguồn hàng agent dựa vào để tư vấn và báo giá cho khách.",
       side: "right",
       previousRoute: "/orders",
       previousLabel: "Quay lại",
@@ -54,9 +54,9 @@ const GUIDE_TOUR: Tour = {
     },
     {
       id: "nav-payments",
-      title: "Thanh toán",
+      title: "Giao dịch",
       content:
-        "Đây là nơi bạn theo dõi doanh thu theo từng đơn. Khoản gắn nhãn “Thanh toán cần duyệt” đang chờ bạn xác nhận trước khi agent gửi mã QR cho khách.",
+        "Đây là nơi bạn theo dõi doanh thu theo từng đơn.",
       side: "right",
       previousRoute: "/products",
       previousLabel: "Quay lại",
