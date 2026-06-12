@@ -103,13 +103,13 @@ export function ShopInfoScreen({ initialTab }: { initialTab?: string }) {
           Điền thông tin cửa hàng để agent tư vấn khách chính xác.
         </p>
         <h1 className="text-pretty text-xl font-semibold sm:text-2xl">
-          <span className="text-foreground">{config.shopName || "Chưa đặt tên shop"}</span>
+          <span className="text-foreground">{config.shopName || "Chưa đặt Tên cửa hàng"}</span>
         </h1>
       </header>
 
       {/* 1 — Thông tin cơ bản */}
       <Section icon={Store} title="Thông tin cơ bản">
-        <Field label="Tên shop">
+        <Field label="Tên cửa hàng">
           <Input
             value={config.shopName}
             onChange={(e) => setConfig({ shopName: e.target.value })}

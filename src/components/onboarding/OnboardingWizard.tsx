@@ -50,7 +50,7 @@ const STEPS: StepDef[] = [
   {
     code: "shop",
     title: "Cửa hàng",
-    benefit: "Đặt tên shop để agent giới thiệu với khách.",
+    benefit: "Đặt Tên cửa hàng để agent giới thiệu với khách.",
     icon: Store,
     render: (p) => <StepCreateShop {...p} />,
     canNext: (d) => d.shopName.trim().length > 0,

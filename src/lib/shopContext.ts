@@ -67,7 +67,7 @@ export function buildBusinessContext(profile?: BusinessProfile, shop?: ShopBasic
   // Nhận diện shop — lần đầu đưa địa chỉ/SĐT/loại hình thật vào ngữ cảnh.
   if (shop) {
     const basics: string[] = [];
-    if (shop.shopName) basics.push(`- Tên shop: ${shop.shopName}`);
+    if (shop.shopName) basics.push(`- Tên cửa hàng: ${shop.shopName}`);
     if (shop.shopType?.length) {
       const types = shop.shopType.map((t) => (t === "online" ? "bán online" : "có cửa hàng")).join(" + ");
       basics.push(`- Loại hình: ${types}`);

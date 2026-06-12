@@ -15,7 +15,7 @@ export function StepCreateShop({ draft, update }: StepProps) {
     
 
       <label className="block space-y-2 text-sm">
-        <span className="font-medium">Tên shop</span>
+        <span className="font-medium">Tên cửa hàng</span>
         <Input
           value={draft.shopName}
           onChange={(e) => update({ shopName: e.target.value })}

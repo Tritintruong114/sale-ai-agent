@@ -137,7 +137,7 @@ Deep-link giữa các bước qua query param (`?focus=<id>`).
 Luồng V0 (đã chốt lại): **Tạo shop → Tạo agent → Thêm sản phẩm → Kết nối Facebook**, rồi
 **Hoàn tất** → màn provisioning (các dòng "Creating your shop/agent…" lần lượt) → màn **Sẵn sàng**
 có nút **Chat thử** (mở chat dialog, đã cài 1 nhịp hand-off ★) + CTA Dashboard.
-- **Tạo shop:** tên shop (`shopName` — thêm vào config).
+- **Tạo shop:** Tên cửa hàng (`shopName` — thêm vào config).
 - **Tạo agent:** tên · tông giọng · xưng hô (bỏ lời chào/từ cấm — dùng mặc định, chỉnh ở M6) + xem trước động.
 - **Thêm sản phẩm:** chọn nguồn — tải **tài liệu/ảnh/bảng tính (xlsx,csv)** hoặc **URL** → agent gom → duyệt (auto-import G4a).
 - **Kết nối Facebook:** mock OAuth; có thể nối thêm Zalo OA.
