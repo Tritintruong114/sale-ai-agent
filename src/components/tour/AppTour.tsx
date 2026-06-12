@@ -34,7 +34,7 @@ const GUIDE_TOUR: Tour = {
       id: "nav-orders",
       title: "Quản lý đơn",
       content:
-        "Mọi đơn agent tạo từ hội thoại với khách đều ở đây.",
+        "Mọi đơn hàng agent tạo từ hội thoại với khách",
       side: "right",
       previousRoute: "/inbox",
       previousLabel: "Quay lại",
@@ -56,7 +56,7 @@ const GUIDE_TOUR: Tour = {
       id: "nav-payments",
       title: "Giao dịch",
       content:
-        "Đây là nơi bạn theo dõi doanh thu theo từng đơn.",
+        "Đây là nơi bạn theo dõi giao dịch theo từng đơn.",
       side: "right",
       previousRoute: "/products",
       previousLabel: "Quay lại",
