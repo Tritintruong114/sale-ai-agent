@@ -67,7 +67,7 @@ const GUIDE_TOUR: Tour = {
       id: "nav-shop",
       title: "Thông tin shop",
       content:
-        "Nơi bạn cập nhật thông tin shop: giới thiệu, chính sách và giờ mở cửa. Agent dựa vào đây để trả lời khách cho đúng và sát với shop.",
+        "Nơi bạn cập nhật thông tin shop: giới thiệu, chính sách và giờ mở cửa. Agent dựa vào thông tin này để tư vấn và trả lời khách hàng",
       side: "right",
       previousRoute: "/payments",
       previousLabel: "Quay lại",
