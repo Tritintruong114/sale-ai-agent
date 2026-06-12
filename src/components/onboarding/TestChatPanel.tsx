@@ -2,17 +2,24 @@
 
 import { useState } from "react";
 import { Bot } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { ChatWindow } from "@/components/shared/chat/ChatWindow";
 import type { ChatMessage } from "@/components/shared/chat/MessageBubble";
-import { buildTestReplies, type DraftProduct } from "@/data/onboarding";
+import { useAgentConfig } from "@/store/agentConfigStore";
+import type { DraftProduct } from "@/data/onboarding";
 
 let seq = 0;
 const nextId = () => `tc-${seq++}`;
 const TYPING_ID = "tc-typing";
 
-// Bản chat thử nội tuyến (inline) — không còn là pop-up. Hiển thị ngay trong card
-// onboarding để chủ shop thấy agent vừa học được gì, liền mạch với luồng training.
+// Câu dự phòng khi API lỗi (chưa cấu hình key / hết quota) — giữ bản thử không gãy.
+const FALLBACK_REPLIES = [
+  "Dạ em cảm ơn anh/chị đã quan tâm ạ. Anh/chị cho em xin nhu cầu cụ thể để em tư vấn kỹ hơn nhé ạ.",
+  "Dạ bên em luôn ưu tiên hàng tươi mới về ạ. Anh/chị ở khu vực nào để em báo phí ship giúp ạ?",
+];
+
+// Bản chat thử nội tuyến (inline) ở màn "Agent đã sẵn sàng" — chủ shop đóng vai khách nhắn thử.
+// Gọi thẳng /api/chat (persona "assistant" — tư vấn viên đọc hồ sơ shop), GIỐNG khung "Talk to Agent".
+// Không có kịch bản/bàn giao mock: agent trả lời thật theo cấu hình vừa tạo.
 export function TestChatPanel({
   agentName,
   pronoun,
@@ -22,44 +29,90 @@ export function TestChatPanel({
   pronoun: string;
   product?: DraftProduct;
 }) {
-  const replies = buildTestReplies({ agentName, pronoun, product });
-  const greeting = `Dạ ${pronoun || "em"} chào anh/chị, ${pronoun || "em"} là ${agentName}, anh/chị cần tư vấn gì ạ?`;
+  const config = useAgentConfig((s) => s.config);
+  const me = pronoun || "em";
+  const greeting =
+    config.identity.greeting?.trim() ||
+    `Dạ ${me} chào anh/chị ạ, ${me} là ${agentName}. Anh/chị cần ${me} tư vấn gì ạ?`;
 
-  // Gợi ý câu khách hay nhắn để chủ shop test nhanh thông tin sản phẩm.
+  // Gợi ý đúng kiểu tin khách hay nhắn fanpage — bám TÊN sản phẩm cho cụ thể.
+  const item = product?.name ?? "loại này";
   const suggestions = [
-    product ? `${product.name} giá bao nhiêu?` : "Sản phẩm này giá bao nhiêu?",
-    "Còn hàng không shop?",
-    "Tư vấn giúp mình với",
+    `${item} bao nhiêu 1kg shop ơi?`,
+    `${item} còn hàng giao nay không shop?`,
+    `Đặt 2kg ${item} giao chiều nay nha shop`,
   ];
 
   const [messages, setMessages] = useState<ChatMessage[]>([
     { id: nextId(), role: "agent", text: greeting },
   ]);
-  const [step, setStep] = useState(0);
+  const [sent, setSent] = useState(false);
   const [typing, setTyping] = useState(false);
+  const [fallbackStep, setFallbackStep] = useState(0);
 
-  const handleSend = (text: string) => {
-    const reply = replies[Math.min(step, replies.length - 1)];
-    setStep((s) => s + 1);
+  // Model có thể tách câu trả lời bằng [NEXT] → phát từng tin, kèm hiệu ứng "đang gõ" cho tự nhiên.
+  const pushReply = (reply: string) => {
+    const chunks = reply.split(/\n*\s*\[NEXT\]\s*\n*/i).map((c) => c.trim()).filter(Boolean);
+    const playChunk = (i: number) => {
+      if (i >= chunks.length) {
+        setTyping(false);
+        setMessages((m) => m.filter((x) => x.id !== TYPING_ID));
+        return;
+      }
+      setTyping(true);
+      setMessages((m) => (m.some((x) => x.id === TYPING_ID) ? m : [...m, { id: TYPING_ID, role: "typing", text: "" }]));
+      const delay = Math.min(1300, 450 + chunks[i].length * 10);
+      setTimeout(() => {
+        setMessages((m) => [...m.filter((x) => x.id !== TYPING_ID), { id: nextId(), role: "agent", text: chunks[i] }]);
+        playChunk(i + 1);
+      }, delay);
+    };
+    playChunk(0);
+  };
+
+  const handleSend = async (text: string) => {
+    setSent(true);
+
+    // Lịch sử gửi cho model — chỉ lấy tin agent/khách, map sang role chuẩn.
+    const history = messages
+      .filter((m) => m.role === "agent" || m.role === "customer")
+      .map((m) => ({ role: m.role === "agent" ? ("assistant" as const) : ("user" as const), content: m.text }));
+
     setTyping(true);
     setMessages((m) => [
       ...m,
       { id: nextId(), role: "customer", text },
       { id: TYPING_ID, role: "typing", text: "" },
     ]);
-    setTimeout(() => {
-      setTyping(false);
-      setMessages((m) => {
-        const base = m.filter((x) => x.id !== TYPING_ID);
-        if (reply.kind === "agent") {
-          return [...base, { id: nextId(), role: "agent", text: reply.text }];
-        }
-        return [
-          ...base,
-          { id: nextId(), role: "system", text: `Cần người: ${reply.reason} — đã chuyển cho bạn` },
-        ];
+
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: [...history, { role: "user", content: text }],
+          agent: {
+            name: agentName,
+            pronoun,
+            tone: config.identity.tone,
+            shopName: config.shopName,
+            shopType: config.shopType,
+            shopAddress: config.shopAddress,
+            shopPhone: config.shopPhone,
+            bannedWords: config.identity.bannedWords,
+            businessProfile: config.businessProfile,
+            persona: "assistant",
+          },
+        }),
       });
-    }, 800);
+      const data = await res.json();
+      if (!res.ok || !data.reply) throw new Error(data.error || "Lỗi gọi API");
+      pushReply(data.reply);
+    } catch {
+      // Dự phòng: API lỗi (chưa có key, hết quota…) → câu mẫu để luồng không gãy.
+      pushReply(FALLBACK_REPLIES[fallbackStep % FALLBACK_REPLIES.length]);
+      setFallbackStep((s) => s + 1);
+    }
   };
 
   return (
@@ -70,9 +123,6 @@ export function TestChatPanel({
         </span>
         <div className="min-w-0">
           <p className="truncate text-base font-semibold leading-tight">{agentName}</p>
-          <Badge variant="secondary" className="mt-0.5 font-normal">
-            Bản thử · không gửi cho khách thật
-          </Badge>
         </div>
       </div>
       <div className="h-[28rem]">
@@ -80,29 +130,9 @@ export function TestChatPanel({
           messages={messages}
           onSend={handleSend}
           disabled={typing}
-          placeholder="Hỏi thử về giá, tồn kho, cách dùng…"
-          header={
-            <div className="space-y-2 border-b bg-muted/40 px-3 py-2">
-              <p className="text-xs text-muted-foreground">
-                Nhắn thử như khách hỏi về sản phẩm — xem agent tư vấn đã đúng chưa.
-              </p>
-              {step === 0 && (
-                <div className="flex flex-wrap gap-1.5">
-                  {suggestions.map((s) => (
-                    <button
-                      key={s}
-                      type="button"
-                      onClick={() => handleSend(s)}
-                      disabled={typing}
-                      className="rounded-full border border-dashed px-2.5 py-1 text-xs text-muted-foreground/70 transition-colors hover:border-solid hover:bg-background hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-                    >
-                      {s}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          }
+          placeholder="Hỏi thử về giá, còn hàng, cách đặt…"
+          quickReplies={!sent ? suggestions : undefined}
+          onQuickReply={handleSend}
         />
       </div>
     </div>

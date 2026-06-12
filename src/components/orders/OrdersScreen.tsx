@@ -25,7 +25,7 @@ import {
   type StatusFilter,
   type View,
 } from "./OrdersToolbar";
-import { NEXT_STATUS, type Approval, type Order } from "./meta";
+import { NEXT_STATUS, ORDERS_METRICS_ENABLED, type Approval, type Order } from "./meta";
 
 // M2 Quản lý đơn — lede + KPI + zone duyệt HITL + lọc/tìm + Board/List + panel chi tiết docked.
 // Bấm đơn → mở panel; "Xem hội thoại" → X1.
@@ -57,7 +57,12 @@ export function OrdersScreen({ highlightId, initialTab }: { highlightId?: string
   }, [selectedId, setOrdersTab]);
 
   // Reflect lên URL (§6.11) — deep-link ?tab= khi vào màn set vào store.
+  // Tab Chỉ số đang tạm ẩn → luôn ép về "manage" dù URL có ?tab=metrics.
   useEffect(() => {
+    if (!ORDERS_METRICS_ENABLED) {
+      setOrdersTab("manage");
+      return;
+    }
     if (initialTab === "metrics" || initialTab === "manage") setOrdersTab(initialTab);
   }, [initialTab, setOrdersTab]);
 
@@ -137,6 +142,8 @@ export function OrdersScreen({ highlightId, initialTab }: { highlightId?: string
   };
 
   const viewConversation = (conversationId: string) => router.push(`/inbox?c=${conversationId}`);
+  // Mở khoản thu liên kết bên màn Thanh toán (tab Thu tiền tự bật do có ?p=).
+  const viewPayment = (paymentId: string) => router.push(`/payments?p=${paymentId}`);
 
   return (
     // Tab Chỉ số: trang dữ liệu căn giữa max-w-6xl (§6.1), cuộn bình thường. Tab Quản lý: full-width
@@ -144,17 +151,17 @@ export function OrdersScreen({ highlightId, initialTab }: { highlightId?: string
     <div
       className={cn(
         "flex w-full flex-col gap-4",
-        tab === "metrics" ? "mx-auto max-w-6xl" : "h-full min-h-0",
+        ORDERS_METRICS_ENABLED && tab === "metrics" ? "mx-auto max-w-6xl" : "h-full min-h-0",
       )}
     >
-      {tab === "metrics" ? (
+      {ORDERS_METRICS_ENABLED && tab === "metrics" ? (
         /* Tab Chỉ số — đọc số liệu, chỉ xem. */
         <div className="flex flex-col gap-6">
           <header className="min-w-0">
             <h1 className="text-pretty text-base font-semibold sm:text-lg">
               {orders.length} đơn đang theo dõi,{" "}
               {pending.length > 0 ? (
-                <span className="text-amber-600">{pending.length} đơn chờ bạn duyệt.</span>
+                <span className="text-amber-600">{pending.length} đơn cần bạn duyệt.</span>
               ) : (
                 <span className="text-emerald-600">tất cả đơn đã được xử lý.</span>
               )}
@@ -264,6 +271,7 @@ export function OrdersScreen({ highlightId, initialTab }: { highlightId?: string
                   onDecide={decide}
                   onAdvance={advance}
                   onViewConversation={viewConversation}
+                  onViewPayment={viewPayment}
                 />
               </div>
             ) : null}

@@ -8,17 +8,10 @@ export type HandoffKey =
   | "out_of_script" // câu hỏi ngoài kịch bản
   | "discount"; // khách xin giảm giá
 
-// Nhóm tình huống để gom cho dễ quét trên màn Bàn giao.
-export type HandoffCategory =
-  | "opportunity" // cơ hội bán
-  | "risk" // rủi ro – phàn nàn
-  | "capability"; // vượt năng lực agent
-
 export type HandoffRule = {
   key: string; // built-in: HandoffKey; custom: tự sinh từ nhãn
   label: string;
   description: string; // một câu: agent dừng khi nào
-  category: HandoffCategory;
   triggerPhrases: string[]; // ví dụ câu khách nói — chủ shop sửa được
   enabled: boolean;
   threshold?: number; // % giảm giá hoặc mốc giá trị, tuỳ tình huống
@@ -84,11 +77,15 @@ export type AgentConfig = {
     bannedWords: string[];
     greeting: string;
     avatar?: string; // ảnh đại diện agent (object URL ở prototype)
+    // Giờ agent tự trả lời khách. Bật = chỉ trực trong khung giờ đã đặt, ngoài giờ tự Tạm ngưng.
+    // Tắt = trực cả ngày (chỉ theo agentEnabled). Optional để config cũ trong localStorage không vỡ.
+    activeHours?: { enabled: boolean; weekly: Record<WeekdayKey, DayHours> };
   };
   handoffRules: HandoffRule[]; // tình huống bàn giao (M1.1)
   dailyLearning: { enabled: boolean; runAt: string; sources: LearningSource[] }; // G2
   byok: { mode: "platform" | "own"; providers: string[] }; // G1
-  notifyChannels: { telegram: boolean; zalo: boolean; events: string[] };
+  // telegram/zalo = đã nối hay chưa; *Detail = định danh nhận tin (Chat ID / số Zalo) — optional để config cũ không vỡ.
+  notifyChannels: { telegram: boolean; zalo: boolean; telegramChatId?: string; zaloPhone?: string; events: string[] };
   agentEnabled: boolean; // bật sau onboarding (O6)
 };
 
@@ -150,40 +147,76 @@ export const DEFAULT_CONFIG: AgentConfig = {
     tone: "thân thiện, chuyên nghiệp",
     bannedWords: ["rẻ vô địch", "cam kết 100%"],
     greeting: "Dạ em chào anh/chị, em có thể tư vấn gì cho mình ạ?",
+    activeHours: {
+      enabled: false,
+      weekly: {
+        mon: { closed: false, open: "08:00", close: "22:00" },
+        tue: { closed: false, open: "08:00", close: "22:00" },
+        wed: { closed: false, open: "08:00", close: "22:00" },
+        thu: { closed: false, open: "08:00", close: "22:00" },
+        fri: { closed: false, open: "08:00", close: "22:00" },
+        sat: { closed: false, open: "08:00", close: "22:00" },
+        sun: { closed: false, open: "08:00", close: "22:00" },
+      },
+    },
   },
   handoffRules: [
     {
       key: "want_buy",
       label: "Khách muốn mua (dấu hiệu chốt đơn)",
-      description: "Khách thể hiện ý định mua rõ ràng — agent dừng để bạn chốt đơn.",
-      category: "opportunity",
-      triggerPhrases: ["chốt đơn nhé", "ship cho mình", "mình lấy cái này", "cho mình đặt"],
+      description: "Khách thể hiện ý định mua rõ ràng",
+      triggerPhrases: [
+        "chốt đơn cho mình nhé",
+        "ship về cho mình với",
+        "mình lấy cái này",
+        "cho mình đặt một cái",
+        "còn hàng mình lấy luôn",
+        "mình mua, gửi địa chỉ nhé",
+      ],
       enabled: true,
     },
     {
       key: "complaint",
       label: "Khách phàn nàn",
-      description: "Khách tỏ ý không hài lòng về sản phẩm, giao hàng hoặc dịch vụ.",
-      category: "risk",
-      triggerPhrases: ["hàng bị lỗi", "giao sai rồi", "đòi hoàn tiền", "shop làm ăn kiểu gì"],
+      description: "Khách tỏ ý không hài lòng về sản phẩm, giao hàng hoặc dịch vụ",
+      triggerPhrases: [
+        "hàng bị lỗi rồi shop ơi",
+        "giao sai mẫu mình đặt",
+        "sản phẩm không giống hình",
+        "mình muốn đổi trả hàng",
+        "đặt mấy hôm chưa thấy giao",
+        "shop làm ăn kiểu gì vậy",
+      ],
       enabled: true,
     },
     {
       key: "discount",
       label: "Khách xin giảm giá",
-      description: "Khách xin giảm vượt mức bạn cho phép — agent dừng để bạn quyết.",
-      category: "risk",
-      triggerPhrases: ["giảm thêm đi", "bớt chút không", "sale mạnh hơn được không"],
+      description: "Khách xin giảm vượt mức bạn cho phép.",
+      triggerPhrases: [
+        "giảm thêm cho mình đi",
+        "bớt chút nữa được không shop",
+        "có mã giảm giá không",
+        "mua hai cái có giảm không",
+        "sale mạnh hơn được không",
+        "freeship cho mình nhé",
+      ],
       enabled: true,
       threshold: 15,
       thresholdUnit: "%",
     },
     {
       key: "out_of_script",
-      label: "Câu hỏi ngoài kịch bản",
+      label: "Khách hỏi ngoài kịch bản",
       description: "Câu hỏi nằm ngoài những gì agent đã được học.",
-      category: "capability",
-      triggerPhrases: ["hỏi sản phẩm chưa có thông tin", "yêu cầu đặc biệt", "thắc mắc kỹ thuật sâu"],
+      triggerPhrases: [
+        "sản phẩm này dùng cho da nhạy cảm được không?",
+        "shop xuất hoá đơn đỏ được không?",
+        "có ship đi nước ngoài không?",
+        "mua sỉ thì giá thế nào?",
+        "bảo hành được bao lâu vậy shop?",
+        "sản phẩm này dùng cho bé được không?",
+      ],
       enabled: true,
     },
   ],
@@ -192,12 +225,12 @@ export const DEFAULT_CONFIG: AgentConfig = {
     runAt: "22:00",
     sources: [
       { key: "closed_today", label: "Hội thoại đã chốt hôm nay", enabled: true, count: 12 },
-      { key: "owner_edits", label: "Lần chủ shop sửa câu trả lời", enabled: true, count: 3 },
-      { key: "handoff_done", label: "Case hand-off đã xử lý", enabled: true, count: 5 },
+      { key: "owner_edits", label: "Câu trả lời bạn đã sửa", enabled: true, count: 3 },
+      { key: "handoff_done", label: "Hội thoại đã bàn giao", enabled: true, count: 5 },
       { key: "new_products", label: "Sản phẩm mới thêm", enabled: false, count: 2 },
     ],
   },
   byok: { mode: "platform", providers: [] },
-  notifyChannels: { telegram: true, zalo: false, events: ["handoff", "big_order"] },
+  notifyChannels: { telegram: true, zalo: false, telegramChatId: "612894501", events: ["handoff", "big_order"] },
   agentEnabled: true,
 };

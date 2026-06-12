@@ -1,4 +1,4 @@
-# Fanpage AI Agent — Kiến trúc Prototype V0
+# Sale AI Agent — Kiến trúc Prototype V0
 
 > Nguồn: `toc-context/00-Index/Roadmap-Agent-App-Concept.md` + `Prototype-V0-Fanpage-Tasks.md`.
 > Phạm vi: prototype V0 — bấm qua được các màn, **dữ liệu mock toàn bộ**, không API/không backend.

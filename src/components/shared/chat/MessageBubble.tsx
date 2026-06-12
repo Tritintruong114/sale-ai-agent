@@ -1,7 +1,9 @@
 import { Fragment, type ReactNode } from "react";
-import { Check, Flag, Loader2, Sparkles } from "lucide-react";
+import { Check, CheckCircle2, Flag, Loader2, QrCode, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { ChatMessage } from "./types";
+import { formatVND } from "@/lib/format";
+import { QrGlyph } from "@/components/payments/QrGlyph";
+import type { ApplyAction, ChatMessage, PaymentCard } from "./types";
 
 // Re-export để không vỡ các import cũ `import { type ChatMessage } from ".../MessageBubble"`.
 export type { ChatMessage } from "./types";
@@ -60,11 +62,14 @@ function renderRichText(text: string): ReactNode {
 export function MessageBubble({
   message,
   ownRole = "customer",
+  onApply,
 }: {
   message: ChatMessage;
   // Phía "mình" — tin của vai này nằm bên phải, màu primary.
   // Inbox: "agent" (bạn là chủ shop). Chat thử: "customer" (bạn đóng vai khách).
   ownRole?: "customer" | "agent";
+  // Bấm nút "Apply" gắn dưới tin agent (vd áp câu mẫu gợi ý vào tình huống bàn giao).
+  onApply?: (messageId: string, action: ApplyAction) => void;
 }) {
   if (message.role === "typing") {
     return (
@@ -105,6 +110,11 @@ export function MessageBubble({
     );
   }
 
+  // Thẻ thanh toán (QR chốt đơn) — luôn ở phía agent (trái).
+  if (message.payment) {
+    return <PaymentCardBubble payment={message.payment} />;
+  }
+
   const isOwn = message.role === ownRole;
 
   // Tin ảnh gửi riêng — render ảnh độc lập (không bọc bubble chữ), canh theo phía gửi.
@@ -125,17 +135,59 @@ export function MessageBubble({
 
   return (
     <div className={cn("flex", isOwn ? "justify-end" : "justify-start")}>
-      <div
-        className={cn(
-          "max-w-[80%] whitespace-pre-wrap break-words rounded-2xl px-3 py-2 text-sm",
-          isOwn
-            ? "rounded-br-sm bg-primary text-primary-foreground"
-            : "rounded-bl-sm bg-muted text-foreground",
-        )}
-      >
-        {renderRichText(message.text)}
+      <div className={cn("flex max-w-[80%] flex-col gap-1.5", isOwn ? "items-end" : "items-start")}>
+        <div
+          className={cn(
+            "whitespace-pre-wrap break-words rounded-2xl px-3 py-2 text-sm",
+            isOwn
+              ? "rounded-br-sm bg-primary text-primary-foreground"
+              : "rounded-bl-sm bg-muted text-foreground",
+          )}
+        >
+          {renderRichText(message.text)}
+        </div>
+        {message.apply ? <ApplyButton message={message} onApply={onApply} /> : null}
       </div>
     </div>
+  );
+}
+
+// Nút hành động gắn dưới tin agent — vd "Apply" câu mẫu gợi ý vào tình huống bàn giao.
+// Đã áp dụng thì khoá lại + đổi nhãn "Đã áp dụng" (emerald) để chủ shop biết đã ghi.
+function ApplyButton({
+  message,
+  onApply,
+}: {
+  message: ChatMessage;
+  onApply?: (messageId: string, action: ApplyAction) => void;
+}) {
+  const action = message.apply;
+  if (!action) return null;
+  const applied = action.applied;
+  return (
+    <button
+      type="button"
+      disabled={applied || !onApply}
+      onClick={() => onApply?.(message.id, action)}
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+        applied
+          ? "cursor-default border-emerald-200 bg-emerald-50 text-emerald-700"
+          : "cursor-pointer border-foreground/15 bg-background text-foreground hover:bg-muted",
+      )}
+    >
+      {applied ? (
+        <>
+          <Check className="size-3.5" aria-hidden />
+          Đã áp dụng
+        </>
+      ) : (
+        <>
+          <Sparkles className="size-3.5 text-violet-500" aria-hidden />
+          Apply
+        </>
+      )}
+    </button>
   );
 }
 
@@ -159,6 +211,50 @@ function ReasoningBlock({ message }: { message: ChatMessage }) {
           </ul>
         ) : null}
       </div>
+    </div>
+  );
+}
+
+// Thẻ mã QR chốt đơn agent gửi khách — QR mock + thông tin chuyển khoản. Đổi viền/nhãn khi đã nhận tiền.
+function PaymentCardBubble({ payment }: { payment: PaymentCard }) {
+  const paid = payment.status === "paid";
+  return (
+    <div className="flex justify-start">
+      <div className="w-[80%] max-w-xs overflow-hidden rounded-2xl rounded-bl-sm border border-foreground/10 bg-card">
+        <div className="flex items-center gap-1.5 border-b bg-muted/40 px-3 py-2 text-xs font-medium text-muted-foreground">
+          <QrCode className="size-3.5" aria-hidden />
+          Mã QR thanh toán
+        </div>
+        <div className="flex flex-col items-center gap-3 p-3">
+          <QrGlyph seed={payment.seed} className="w-32" />
+          <div className="w-full space-y-1 border-t pt-2.5">
+            <PayRow label="Đơn" value={payment.items} />
+            <PayRow label="Ngân hàng" value={payment.bank} />
+            <PayRow label="Số tài khoản" value={payment.accountNo} />
+            <PayRow label="Chủ tài khoản" value={payment.holder} />
+            <PayRow label="Số tiền" value={formatVND(payment.amount)} />
+            <PayRow label="Nội dung CK" value={payment.memo} />
+          </div>
+          <span
+            className={cn(
+              "inline-flex w-full items-center justify-center gap-1.5 rounded-md py-1.5 text-xs font-medium",
+              paid ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-800",
+            )}
+          >
+            {paid ? <CheckCircle2 className="size-3.5" aria-hidden /> : <Loader2 className="size-3.5" aria-hidden />}
+            {paid ? "Đã nhận thanh toán" : "Chờ khách chuyển khoản"}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PayRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-baseline justify-between gap-3 text-xs">
+      <span className="shrink-0 text-muted-foreground">{label}</span>
+      <span className="min-w-0 truncate text-right font-medium tabular-nums">{value}</span>
     </div>
   );
 }

@@ -69,7 +69,7 @@ Demo: `[ ]` chưa làm · `[~]` đang dựng · `[x]` bấm qua được.
 | 16 | M6 Cấu hình | Cấu hình 5 tình huống hand-off | Bảng bật/tắt `handoffRules` + chỉnh ngưỡng — nguồn sự thật cho M1.1 | Mới | `config.ts` | M6.3 |
 | 17 | M6 Cấu hình | Danh tính & giọng | Cùng nội dung O3, chỉnh lại bất cứ lúc nào | Mới | `config.ts` | M6.4 |
 | 18 | M6 Cấu hình | Khoá AI / BYOK (G1) | Cùng O5; dùng khoá nền tảng hoặc đổi/thêm nhà cung cấp | Mới | `config.ts` | M6.5 |
-| 19 | M6 Cấu hình | Thông báo & kênh báo chủ shop | Kênh nhận hand-off (Telegram/Zalo), chọn loại tin báo | Mới | `config.ts` | M6.6 |
+| 19 | M6 Cấu hình | Thông báo & kênh báo chủ shop | Kênh nhận hand-off (Telegram/Zalo), chọn loại thông báo | Mới | `config.ts` | M6.6 |
 | 20 | Xuyên suốt | Khung hybrid + điều hướng liên màn | Nút là chính, chat chỉ ở M1; deep-link Inbox→Đơn→Thanh toán→Dashboard | Sửa | — | X1 |
 | 21 | Xuyên suốt | Bảng so sánh "có agent vs thủ công" | `comparison`: thời gian phản hồi, khách song song, đơn bỏ lỡ, giờ tiết kiệm | Mới | `dashboard.json` | X2 |
 | 22 | Xuyên suốt | Badge "Chạy bằng khoá AI của bạn" (G1) | TopBar `ByokBadge` (đã có), đọc `byok.mode` | Đã có | `config.ts` | X2 |

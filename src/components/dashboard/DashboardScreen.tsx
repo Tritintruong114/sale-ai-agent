@@ -11,6 +11,7 @@ import {
   MessageSquare,
   Package,
   PieChart,
+  RefreshCw,
   ShoppingCart,
   Sparkles,
   TrendingDown,
@@ -22,8 +23,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { AgentAvatar } from "@/components/shared/AgentAvatar";
 import { cn } from "@/lib/utils";
 import { formatVND } from "@/lib/format";
+import { Button } from "@/components/ui/button";
 import { useAgentConfig } from "@/store/agentConfigStore";
 import defaultData from "@/data/dashboard.json";
+import { SetupGuide } from "./SetupGuide";
+// Toggle bật/tắt trực kênh tạm ẩn — bỏ comment để hiện lại.
+// import { AgentStatusToggle } from "./AgentStatusToggle";
 
 export type DashboardData = typeof defaultData;
 
@@ -32,9 +37,9 @@ export type DashboardData = typeof defaultData;
 // chỉ màu), hover 150–300ms tôn trọng reduced-motion, chart có nhãn trực tiếp + tooltip + aria.
 
 const TODO_ITEMS = [
-  { key: "handoff" as const, label: "Hội thoại cần người", hint: "Agent đã chuyển cho bạn", href: "/inbox", icon: Inbox },
-  { key: "bigOrders" as const, label: "Đơn cần duyệt", hint: "Agent cần bạn xác nhận trước khi chốt", href: "/orders", icon: ShoppingCart },
-  { key: "payments" as const, label: "Thanh toán cần duyệt", hint: "Agent cần bạn xác nhận trước khi thu", href: "/payments", icon: CreditCard },
+  { key: "handoff" as const, label: "Trả lời khách", hint: "Agent đã chuyển hội thoại cho bạn", href: "/inbox", icon: Inbox },
+  { key: "bigOrders" as const, label: "Duyệt đơn", hint: "Agent cần bạn xác nhận trước khi chốt", href: "/orders", icon: ShoppingCart },
+  { key: "payments" as const, label: "Duyệt thanh toán", hint: "Agent cần bạn xác nhận trước khi gửi QR", href: "/payments", icon: CreditCard },
 ];
 
 // Mỗi KPI một icon + tint chip riêng để quét nhanh (màu chỉ hỗ trợ, nhãn vẫn là chính).
@@ -70,16 +75,19 @@ function SectionEmpty({
   );
 }
 
-// Avatar agent + chấm "đang trực" (xanh) ở header empty state.
+// Avatar agent + chấm trạng thái ở header (xanh = đang trực, xám = Tạm ngưng) — đồng bộ với toggle.
 // Avatar dùng chung component shared (cùng nguồn config.identity với Onboarding bước 2).
-function AgentAvatarLive({ name, src }: { name: string; src?: string }) {
+function AgentAvatarLive({ name, src, online = true }: { name: string; src?: string; online?: boolean }) {
   return (
     <span className="relative shrink-0">
       <AgentAvatar name={name} src={src} size={48} className="ring-1 ring-foreground/10" />
       <span
-        className="absolute -bottom-0.5 -right-0.5 size-3.5 rounded-full border-2 border-background bg-emerald-500"
-        title="Đang trực"
-        aria-label="Đang trực"
+        className={cn(
+          "absolute -bottom-0.5 -right-0.5 size-3.5 rounded-full border-2 border-background",
+          online ? "bg-emerald-500" : "bg-muted-foreground/40",
+        )}
+        title={online ? "Đang trực" : "Tạm ngưng"}
+        aria-label={online ? "Đang trực" : "Tạm ngưng"}
       />
     </span>
   );
@@ -127,6 +135,7 @@ export function DashboardScreen({ data = defaultData, live = false }: { data?: D
   const shopName = useAgentConfig((s) => s.config.shopName);
   const agentName = useAgentConfig((s) => s.config.identity.name);
   const agentAvatar = useAgentConfig((s) => s.config.identity.avatar);
+  const agentEnabled = useAgentConfig((s) => s.config.agentEnabled);
   const maxVolume = data.hourlyVolume.length ? Math.max(...data.hourlyVolume.map((h) => h.count)) : 0;
   const totalIntent = data.intentBreakdown.reduce((s, i) => s + i.count, 0);
   const totalTodo = data.todo.handoff + data.todo.bigOrders + data.todo.payments;
@@ -137,9 +146,10 @@ export function DashboardScreen({ data = defaultData, live = false }: { data?: D
 
   return (
     <div className="mx-auto max-w-6xl space-y-8 pb-4">
-      {/* Lede — header thống nhất: avatar agent đứng đầu ở mọi trạng thái, chỉ đổi phần nội dung. */}
-      <header className="flex items-center gap-3.5">
-        <AgentAvatarLive name={agentName} src={agentAvatar} />
+      {/* Lede — header thống nhất: avatar + tóm tắt ngày bên trái, toggle trạng thái agent bên phải. */}
+      <header className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3.5">
+        <AgentAvatarLive name={agentName} src={agentAvatar} online={agentEnabled} />
         <div className="min-w-0 space-y-1">
           <p className="flex items-center gap-2 text-sm text-muted-foreground">
             <span>{shopName} · hôm nay {data.dailyReport.date}</span>
@@ -159,32 +169,54 @@ export function DashboardScreen({ data = defaultData, live = false }: { data?: D
           ) : (
             <>
               <h1 className="text-pretty text-lg font-semibold sm:text-xl">
-                <span className="text-foreground">{agentName}</span> đang trực kênh, sẵn sàng trả lời khách
+                <span className="text-foreground">{agentName}</span>{" "}
+                {agentEnabled ? "đang trực kênh, sẵn sàng trả lời khách" : "đang Tạm ngưng trực kênh"}
               </h1>
               <p className="text-sm text-muted-foreground">
-                Chưa có hội thoại nào hôm nay. Số liệu sẽ hiện ngay khi có khách nhắn.
+                {agentEnabled
+                  ? "Chưa có hội thoại nào hôm nay. Số liệu sẽ hiện ngay khi có khách nhắn."
+                  : "Khách nhắn tới sẽ chờ bạn trả lời. Bật lại để agent tự tiếp khách."}
               </p>
             </>
           )}
         </div>
+        </div>
+        {/* <AgentStatusToggle /> — tạm ẩn */}
       </header>
 
+      {!hasActivity ? (
+        // Empty state — shop vừa onboarding: guide thiết lập + một block "chưa có số liệu" (purpose của Dashboard).
+        <>
+          <SetupGuide />
+          <section
+            aria-labelledby="nodata-h"
+            className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-foreground/15 px-4 py-12 text-center"
+          >
+            <span className="flex size-11 items-center justify-center rounded-full bg-muted text-muted-foreground">
+              <BarChart3 className="size-5" aria-hidden />
+            </span>
+            <div className="space-y-1">
+              <p id="nodata-h" className="text-sm font-medium">Chưa có số liệu nào</p>
+              <p className="mx-auto max-w-sm text-xs text-muted-foreground">
+                Nơi xem báo cáo bán hàng trong ngày: hội thoại, đơn, doanh thu.
+              </p>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => router.refresh()}>
+              <RefreshCw className="size-4" aria-hidden />
+              Làm mới
+            </Button>
+          </section>
+        </>
+      ) : (
+      <>
       {/* 1 — Cần làm hôm nay */}
       <section className="space-y-3" aria-labelledby="todo-h">
-        <h2 id="todo-h" className="text-lg font-semibold">Cần làm hôm nay</h2>
+        <h2 id="todo-h" className="text-lg font-semibold">Việc bạn cần làm hôm nay</h2>
         {totalTodo === 0 ? (
-          hasActivity ? (
-            <div className="flex items-center gap-3 rounded-xl bg-emerald-50 px-4 py-5 text-emerald-800 ring-1 ring-emerald-200">
-              <CheckCircle2 className="size-5 shrink-0" aria-hidden />
-              <p className="text-sm font-medium">Tất cả đã xử lý xong — agent đang chạy tốt.</p>
-            </div>
-          ) : (
-            <SectionEmpty
-              icon={Inbox}
-              title="Chưa có việc nào cần bạn"
-              description="Agent đang tự xử lý hội thoại. Gặp ca cần bạn — nhường bạn trả lời, duyệt đơn hay thanh toán — agent sẽ đưa lên đây."
-            />
-          )
+          <div className="flex items-center gap-3 rounded-xl bg-emerald-50 px-4 py-5 text-emerald-800 ring-1 ring-emerald-200">
+            <CheckCircle2 className="size-5 shrink-0" aria-hidden />
+            <p className="text-sm font-medium">Tất cả đã xử lý xong — agent đang chạy tốt.</p>
+          </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-3">
             {TODO_ITEMS.map((item) => {
@@ -327,7 +359,7 @@ export function DashboardScreen({ data = defaultData, live = false }: { data?: D
               <SectionEmpty
                 icon={PieChart}
                 title="Chưa đủ hội thoại để phân loại"
-                description="Agent sẽ tự gom nhóm khách hỏi gì nhiều nhất khi có hội thoại."
+                description="Agent sẽ tự phân nhóm khách hỏi gì nhiều nhất khi có hội thoại."
               />
             ) : null}
             {data.intentBreakdown.map((i, idx) => {
@@ -415,7 +447,7 @@ export function DashboardScreen({ data = defaultData, live = false }: { data?: D
         <Card size="sm" className="lg:col-span-2">
           <CardHeader>
             <CardTitle>Hội thoại đáng chú ý</CardTitle>
-            <CardDescription>Những ca nên xem lại hôm nay</CardDescription>
+            <CardDescription>Các đoạn hội thoại cần bạn kiểm tra</CardDescription>
           </CardHeader>
           <CardContent className="space-y-1">
             {data.notableConversations.length === 0 ? (
@@ -474,6 +506,8 @@ export function DashboardScreen({ data = defaultData, live = false }: { data?: D
           </span>
         </button>
       </section>
+      </>
+      )}
     </div>
   );
 }

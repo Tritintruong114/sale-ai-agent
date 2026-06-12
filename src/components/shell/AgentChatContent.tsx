@@ -1,14 +1,25 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { AgentAvatar } from "@/components/shared/AgentAvatar";
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
 import { ChatWindow } from "@/components/shared/chat/ChatWindow";
 import type { ChatMessage } from "@/components/shared/chat/MessageBubble";
 import { cn } from "@/lib/utils";
-import { useUiStore } from "@/store/uiStore";
+import { useUiStore, type AgentChatScenario } from "@/store/uiStore";
 import { useAgentConfig } from "@/store/agentConfigStore";
 import { buildRetrainFlow, RETRAIN_TRIGGER, retrainCtaLabel, type RetrainTurn } from "@/data/retrainFlow";
+import { buildPaymentTestFlow, PAYMENT_TEST_MESSAGE } from "@/data/paymentTestFlow";
+import { buildSuggestFlow } from "@/data/suggestFlow";
+import type { ApplyAction } from "@/components/shared/chat/types";
+import type { ComposerModel } from "@/components/shared/chat/Composer";
+
+// Model trả lời (mock prototype) — hiển thị ở thanh công cụ ô nhập để chọn nhanh.
+const CHAT_MODELS: ComposerModel[] = [
+  { id: "gpt-5.4-mini", label: "GPT-5.4 mini · nhanh" },
+  { id: "gpt-5.4", label: "GPT-5.4 · trả lời sâu hơn" },
+  { id: "claude-haiku-4.5", label: "Claude Haiku 4.5 · tiết kiệm" },
+];
 
 // Nội dung chat "Talk to Agent" — tách riêng khỏi khung trượt (AgentChatPanel) để tái dùng:
 // vừa render trong side panel, vừa render độc lập ở route /agent-chat (load qua iframe khi tách màn).
@@ -34,6 +45,7 @@ type AgentChatContentProps = {
 
 export function AgentChatContent({ headerActions }: AgentChatContentProps) {
   const draft = useUiStore((s) => s.agentChatDraft);
+  const scenario = useUiStore((s) => s.agentChatScenario);
   const { name: agentName, pronoun, avatar, tone, bannedWords, greeting: identityGreeting } = useAgentConfig((s) => s.config.identity);
   const shopName = useAgentConfig((s) => s.config.shopName);
   const shopType = useAgentConfig((s) => s.config.shopType);
@@ -41,15 +53,19 @@ export function AgentChatContent({ headerActions }: AgentChatContentProps) {
   const shopPhone = useAgentConfig((s) => s.config.shopPhone);
   const businessProfile = useAgentConfig((s) => s.config.businessProfile);
   const agentEnabled = useAgentConfig((s) => s.config.agentEnabled);
+  // Ghi câu mẫu gợi ý vào tình huống bàn giao khi bấm Apply (nguồn sự thật chung với màn Cấu hình Agent).
+  const setConfig = useAgentConfig((s) => s.setConfig);
+  const handoffRules = useAgentConfig((s) => s.config.handoffRules);
 
   // Chọn agent đang trò chuyện — mặc định Manager Agent (điều phối), kèm trợ lý của cửa hàng.
   // Nhãn trợ lý là "Agent [Tên]" để khớp luồng test sau re-train (đổi agent trên header).
   const AGENTS = [
-    { id: "manager", name: "Manager Agent", subtitle: "Điều phối các trợ lý của bạn", avatar: undefined as string | undefined },
-    { id: "assistant", name: `Agent ${agentName}`, subtitle: agentEnabled ? "Trợ lý của bạn · đang trực" : "Trợ lý của bạn · đang tắt", avatar },
+    { id: "manager", name: "Manager Agent", avatar: undefined as string | undefined },
+    { id: "assistant", name: `Agent ${agentName}`, subtitle: agentEnabled ? "Trợ lý tư vấn của bạn · đang trực" : "Trợ lý của bạn · đang tắt", avatar },
   ] as const;
   const [agentId, setAgentId] = useState<string>("manager");
   const active = AGENTS.find((a) => a.id === agentId) ?? AGENTS[0];
+  const [modelId, setModelId] = useState(CHAT_MODELS[0].id);
 
   // Có lần đẩy draft mới (vd "Train with Manager" từ M6) → chuyển về Manager Agent. Chỉnh state khi prop đổi, không effect.
   const [seenDraftNonce, setSeenDraftNonce] = useState(0);
@@ -78,6 +94,9 @@ export function AgentChatContent({ headerActions }: AgentChatContentProps) {
   const [retrainIndex, setRetrainIndex] = useState(0);
   const [awaitingAnswer, setAwaitingAnswer] = useState(false);
   const [quickReplies, setQuickReplies] = useState<string[]>([]);
+  // Kịch bản tự chạy: chờ chuyển agent xong mới chạy (tránh đua với reset khi đổi agent).
+  const [seenScenarioNonce, setSeenScenarioNonce] = useState(0);
+  const [pendingScenario, setPendingScenario] = useState<AgentChatScenario | null>(null);
 
   // Đổi agent (qua dropdown hoặc CTA test) → reset hội thoại về lời chào agent đó, xoá trạng thái re-train.
   // Chỉnh state khi prop/đầu vào đổi ngay trong render (React pattern), không dùng effect.
@@ -91,6 +110,16 @@ export function AgentChatContent({ headerActions }: AgentChatContentProps) {
     setRetrainIndex(0);
     setAwaitingAnswer(false);
     setQuickReplies([]);
+  }
+
+  // Nhận tín hiệu kịch bản tự chạy: chuyển sang agent phù hợp (payment → trợ lý; gợi ý bàn giao → Manager)
+  // + tự nhận prevAgentId để render-sync không reset đè, rồi đánh dấu chờ chạy. Việc chạy (có timer) để effect.
+  if (scenario && scenario.nonce !== seenScenarioNonce) {
+    setSeenScenarioNonce(scenario.nonce);
+    const target = scenario.kind === "suggestHandoff" ? "manager" : "assistant";
+    setAgentId(target);
+    setPrevAgentId(target);
+    setPendingScenario(scenario);
   }
 
   // Phát tuần tự các emission của một lượt kịch bản (typing → tin; tool: running → done), rồi mở câu hỏi/CTA.
@@ -125,6 +154,13 @@ export function AgentChatContent({ headerActions }: AgentChatContentProps) {
           );
           run();
         }, STEP_DELAY);
+      } else if (e.kind === "payment") {
+        // Thẻ mã QR — hiện hiệu ứng "đang gõ" rồi đẩy thẻ thanh toán (như tin agent gửi).
+        setMessages((m) => [...m, { id: TYPING_ID, role: "typing", text: "" }]);
+        setTimeout(() => {
+          setMessages((m) => [...m.filter((x) => x.id !== TYPING_ID), { id: nextId(), role: "agent", text: "", payment: e.payment }]);
+          run();
+        }, STEP_DELAY);
       } else {
         setMessages((m) => [...m, { id: TYPING_ID, role: "typing", text: "" }]);
         setTimeout(() => {
@@ -132,7 +168,7 @@ export function AgentChatContent({ headerActions }: AgentChatContentProps) {
             const base = m.filter((x) => x.id !== TYPING_ID);
             return e.kind === "reasoning"
               ? [...base, { id: nextId(), role: "reasoning", text: e.text, steps: e.steps }]
-              : [...base, { id: nextId(), role: "agent", text: e.text }];
+              : [...base, { id: nextId(), role: "agent", text: e.text, apply: e.apply }];
           });
           run();
         }, STEP_DELAY);
@@ -140,6 +176,47 @@ export function AgentChatContent({ headerActions }: AgentChatContentProps) {
     };
     run();
   };
+
+  // Chạy kịch bản "Kiểm tra với Agent": reset hội thoại về lời chào trợ lý + tin khách chốt đơn, rồi phát lượt 0.
+  const startPaymentTest = () => {
+    const turns = buildPaymentTestFlow(agentName, pronoun);
+    setRetrainTurns(turns);
+    setRetrainIndex(0);
+    setAwaitingAnswer(false);
+    setStep(0);
+    setMessages([
+      { id: nextId(), role: "agent", text: greetingFor("assistant") },
+      { id: nextId(), role: "customer", text: PAYMENT_TEST_MESSAGE },
+    ]);
+    playTurn(turns[0], turns.length === 1);
+  };
+
+  // Chạy kịch bản "Gợi ý câu khách nói": Manager nhận yêu cầu rồi đề xuất câu mẫu kèm nút Apply cho tình huống đó.
+  const runHandoffSuggest = (sc: Extract<AgentChatScenario, { kind: "suggestHandoff" }>) => {
+    const turns = buildSuggestFlow({ ruleKey: sc.ruleKey, label: sc.label, description: sc.description, agentName });
+    setRetrainTurns(turns);
+    setRetrainIndex(0);
+    setAwaitingAnswer(false);
+    setStep(0);
+    setMessages([
+      { id: nextId(), role: "agent", text: greetingFor("manager") },
+      { id: nextId(), role: "customer", text: `Gợi ý giúp mình vài ví dụ câu khách thường nói cho tình huống bàn giao "${sc.label}".` },
+    ]);
+    playTurn(turns[0], turns.length === 1);
+  };
+
+  // Chờ một nhịp cho việc đổi agent ổn định rồi mới chạy kịch bản (timer nằm ngoài thân effect — không reset đồng bộ).
+  useEffect(() => {
+    if (!pendingScenario) return;
+    const sc = pendingScenario;
+    const t = setTimeout(() => {
+      setPendingScenario(null);
+      if (sc.kind === "payment") startPaymentTest();
+      else runHandoffSuggest(sc);
+    }, 0);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingScenario]);
 
   const handleSend = async (text: string) => {
     setQuickReplies([]);
@@ -240,6 +317,34 @@ export function AgentChatContent({ headerActions }: AgentChatContentProps) {
     void handleSend(text);
   };
 
+  // Bấm Apply dưới tin agent: ghi câu mẫu gợi ý vào tình huống bàn giao (có thì gộp, chưa có thì tạo mới),
+  // rồi đánh dấu tin đã áp (đổi nút sang "Đã áp dụng"). Nguồn sự thật = agentConfigStore (đồng bộ màn Cấu hình).
+  const handleApply = (messageId: string, action: ApplyAction) => {
+    if (action.kind === "handoffPhrases") {
+      const existing = handoffRules.find((r) => r.key === action.ruleKey);
+      if (existing) {
+        const merged = [...existing.triggerPhrases];
+        for (const p of action.phrases) if (!merged.includes(p)) merged.push(p);
+        setConfig({ handoffRules: handoffRules.map((r) => (r.key === action.ruleKey ? { ...r, triggerPhrases: merged } : r)) });
+      } else {
+        setConfig({
+          handoffRules: [
+            ...handoffRules,
+            {
+              key: action.ruleKey,
+              label: action.label,
+              description: action.description || "Tình huống do bạn thêm.",
+              triggerPhrases: action.phrases,
+              enabled: true,
+              custom: true,
+            },
+          ],
+        });
+      }
+    }
+    setMessages((m) => m.map((x) => (x.id === messageId && x.apply ? { ...x, apply: { ...x.apply, applied: true } } : x)));
+  };
+
   const showSuggestions = agentId === "manager" && messages.length <= 1 && quickReplies.length === 0 && !typing;
 
   return (
@@ -251,7 +356,8 @@ export function AgentChatContent({ headerActions }: AgentChatContentProps) {
           <span
             className={cn(
               "absolute -bottom-0.5 -right-0.5 size-3 rounded-full border-2 border-card",
-              agentEnabled ? "bg-emerald-500" : "bg-muted-foreground",
+              // Manager luôn hoạt động (xanh); Trợ Lý theo trạng thái trực kênh (agentEnabled).
+              active.id === "manager" || agentEnabled ? "bg-emerald-500" : "bg-muted-foreground",
             )}
             aria-hidden
           />
@@ -287,25 +393,16 @@ export function AgentChatContent({ headerActions }: AgentChatContentProps) {
           ownRole="customer"
           placeholder={`Nhắn cho ${active.name}…`}
           draft={draft}
-          quickReplies={quickReplies}
+          quickReplies={showSuggestions ? suggestions : quickReplies}
           onQuickReply={handleQuickReply}
-          header={
-            showSuggestions ? (
-              <div className="flex flex-wrap gap-1.5 border-b bg-muted/40 px-3 py-2">
-                {suggestions.map((s) => (
-                  <button
-                    key={s}
-                    type="button"
-                    onClick={() => handleSend(s)}
-                    disabled={typing}
-                    className="rounded-full border border-dashed px-2.5 py-1 text-xs text-muted-foreground/70 transition-colors hover:border-solid hover:bg-background hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
-            ) : null
-          }
+          onApply={handleApply}
+          composer={{
+            enableAttachments: true,
+            enableVoice: true,
+            models: CHAT_MODELS,
+            modelId,
+            onModelChange: setModelId,
+          }}
         />
       </div>
     </div>

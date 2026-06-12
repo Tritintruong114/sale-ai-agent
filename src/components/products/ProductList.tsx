@@ -1,75 +1,46 @@
-import { ArrowDown, ArrowUp, ChevronRight, ChevronsUpDown, ImageIcon, PackageSearch, ShoppingCart } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronRight, ChevronsUpDown, ImageIcon, PackageSearch, Pause, Play } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { formatVND } from "@/lib/format";
-import { STOCK_META, stockState, type CatalogItem } from "./meta";
-import { productStats } from "./productStats";
+import { type CatalogItem } from "./meta";
 
 // Chế độ Danh sách — data table quét nhanh nhiều sản phẩm (mirror OrderList): ảnh thumbnail + tên,
-// giá/tồn canh phải tabular, chip tồn (a11y: không chỉ màu), hàng chọn nổi bật + truy cập bàn phím.
-// Bấm hàng → mở panel chi tiết. Header cột sắp xếp được (aria-sort); sort do cha quản (controlled)
-// để sắp toàn bộ tập rồi mới render — đồng bộ với sort Select trên toolbar.
+// giá canh phải tabular. Bấm hàng → mở panel chi tiết. Header cột sắp xếp được (aria-sort); sort do
+// cha quản (controlled) để sắp toàn bộ tập rồi mới render — đồng bộ với sort Select trên toolbar.
 
-export type ProductSortKey = "newest" | "name" | "orders" | "price" | "stock";
+export type ProductSortKey = "newest" | "name" | "price";
 export type ProductSortDir = "asc" | "desc";
 
-// Hướng mặc định khi mới bấm sang cột: chữ tăng dần (A→Z), số/đơn giảm dần (cao trước),
-// tồn tăng dần (ít trước — đưa hàng sắp/hết lên đầu để xử lý).
+// Hướng mặc định khi mới bấm sang cột: chữ tăng dần (A→Z), giá giảm dần (cao trước).
 export const PRODUCT_SORT_DEFAULT_DIR: Record<ProductSortKey, ProductSortDir> = {
   newest: "desc",
   name: "asc",
-  orders: "desc",
   price: "desc",
-  stock: "asc",
 };
 
 export function sortProducts(items: CatalogItem[], key: ProductSortKey, dir: ProductSortDir): CatalogItem[] {
   if (key === "newest") return items; // giữ thứ tự danh mục (item mới prepend lên đầu)
   const sign = dir === "asc" ? 1 : -1;
-  const orderCount = new Map<string, number>();
-  const orders = (p: CatalogItem) => {
-    let n = orderCount.get(p.id);
-    if (n === undefined) {
-      n = productStats(p.id).orderCount;
-      orderCount.set(p.id, n);
-    }
-    return n;
-  };
   return [...items].sort((a, b) => {
     switch (key) {
       case "name":
         return sign * a.name.localeCompare(b.name, "vi");
-      case "orders":
-        return sign * (orders(a) - orders(b)) || a.name.localeCompare(b.name, "vi");
-      case "price":
-        return sign * (a.price - b.price);
       default:
-        return sign * (a.stock - b.stock); // stock
+        return sign * (a.price - b.price); // price
     }
   });
 }
 
-// Cột sắp xếp được. "Đơn liên quan" ẩn dưới lg (giữ className responsive như body).
 const COLUMNS: { key: ProductSortKey; label: string; align: "left" | "right"; className?: string }[] = [
   { key: "name", label: "Sản phẩm", align: "left" },
-  { key: "orders", label: "Đơn liên quan", align: "right", className: "hidden lg:table-cell" },
   { key: "price", label: "Giá", align: "right" },
-  { key: "stock", label: "Tồn", align: "right" },
 ];
-
-function StockBadge({ item }: { item: CatalogItem }) {
-  const meta = STOCK_META[stockState(item)];
-  return (
-    <span className={cn("inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[11px] font-medium", meta.cls)}>
-      <meta.icon className="size-2.5" aria-hidden />
-      {meta.label}
-    </span>
-  );
-}
 
 export function ProductList({
   items,
   selectedId,
   onOpen,
+  onTogglePause,
   sortKey,
   sortDir,
   onSort,
@@ -77,6 +48,7 @@ export function ProductList({
   items: CatalogItem[];
   selectedId: string | null;
   onOpen: (id: string) => void;
+  onTogglePause: (id: string) => void;
   sortKey: ProductSortKey;
   sortDir: ProductSortDir;
   onSort: (key: ProductSortKey) => void;
@@ -92,7 +64,7 @@ export function ProductList({
 
   return (
     <div className="overflow-x-auto rounded-lg ring-1 ring-foreground/10">
-      <table className="w-full min-w-[44rem] border-collapse text-left">
+      <table className="w-full min-w-[40rem] border-collapse text-left">
         <caption className="sr-only">
           Danh sách sản phẩm — bấm tiêu đề cột để sắp xếp, bấm một hàng để xem chi tiết.
         </caption>
@@ -137,6 +109,9 @@ export function ProductList({
             <th scope="col" className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
               Trạng thái
             </th>
+            <th scope="col" className="w-px">
+              <span className="sr-only">Tạm ngưng / mở bán</span>
+            </th>
             <th scope="col" className="w-9">
               <span className="sr-only">Mở chi tiết</span>
             </th>
@@ -145,13 +120,12 @@ export function ProductList({
         <tbody className="divide-y">
           {items.map((p) => {
             const selected = p.id === selectedId;
-            const state = stockState(p);
-            const { orderCount, unitsSold } = productStats(p.id);
             return (
               <tr
                 key={p.id}
                 onClick={() => onOpen(p.id)}
                 onKeyDown={(e) => {
+                  if (e.target !== e.currentTarget) return; // bỏ qua khi thao tác trên nút bên trong hàng
                   if (e.key === "Enter" || e.key === " ") {
                     e.preventDefault();
                     onOpen(p.id);
@@ -159,7 +133,7 @@ export function ProductList({
                 }}
                 tabIndex={0}
                 aria-selected={selected}
-                aria-label={`${p.name}, ${formatVND(p.price)}, tồn ${p.stock}`}
+                aria-label={`${p.name}, ${formatVND(p.price)}`}
                 className={cn(
                   "cursor-pointer outline-none transition-colors [&>td]:px-3 [&>td]:py-2.5 [&>td]:align-middle",
                   "focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/50",
@@ -190,34 +164,36 @@ export function ProductList({
                   <p className="truncate text-[11px] text-muted-foreground">{p.description}</p>
                 </td>
 
-                {/* Đơn liên quan — canh phải, ẩn dưới lg */}
-                <td className="hidden whitespace-nowrap text-right text-xs tabular-nums text-muted-foreground lg:table-cell">
-                  {orderCount > 0 ? (
-                    <span className="inline-flex items-center gap-1">
-                      <ShoppingCart className="size-3" aria-hidden />
-                      {orderCount} đơn · {unitsSold} đã bán
-                    </span>
-                  ) : (
-                    <span className="text-muted-foreground/70">Chưa có đơn</span>
-                  )}
-                </td>
-
                 {/* Giá — canh phải */}
                 <td className="text-right text-sm font-semibold tabular-nums">{formatVND(p.price)}</td>
 
-                {/* Tồn — canh phải, tô nhấn khi sắp/hết */}
-                <td
-                  className={cn(
-                    "text-right text-sm tabular-nums",
-                    state !== "in_stock" ? "font-semibold text-amber-600" : "text-foreground",
+                {/* Trạng thái bán — Tạm ngưng / đang bán */}
+                <td>
+                  {p.paused ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-slate-200 px-1.5 py-0.5 text-[11px] font-medium text-slate-700">
+                      Tạm ngưng
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-1.5 py-0.5 text-[11px] font-medium text-emerald-700">
+                      Đang bán
+                    </span>
                   )}
-                >
-                  {p.stock}
                 </td>
 
-                {/* Trạng thái tồn — chip màu + nhãn (a11y: không chỉ màu) */}
-                <td>
-                  <StockBadge item={p} />
+                {/* Tạm ngưng / mở bán lại — hành động ngay trên hàng (chặn nổi bọt để không mở chi tiết) */}
+                <td className="whitespace-nowrap text-right">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onTogglePause(p.id);
+                    }}
+                    className={cn("h-7", !p.paused && "text-amber-700 hover:text-amber-800")}
+                  >
+                    {p.paused ? <Play className="size-3.5" aria-hidden /> : <Pause className="size-3.5" aria-hidden />}
+                    {p.paused ? "Mở bán lại" : "Tạm ngưng"}
+                  </Button>
                 </td>
 
                 <td className="text-right">

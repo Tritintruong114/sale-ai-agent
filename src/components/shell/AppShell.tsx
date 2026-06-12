@@ -3,6 +3,7 @@ import { AgentChatPopout } from "./AgentChatPopout";
 import { MobileScrim } from "./MobileScrim";
 import { SideNav } from "./SideNav";
 import { TopBar } from "./TopBar";
+import { WelcomeModal } from "./WelcomeModal";
 
 // §2 design.md — AppShell = SideNav (trái) + cột phải (TopBar + main).
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -18,6 +19,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <AgentChatPanel />
       {/* Cửa sổ nổi (iframe) khi tách màn chat ra khỏi panel */}
       <AgentChatPopout />
+      {/* Welcome float góc phải sau Onboarding — chọn xem hướng dẫn hay tự khám phá (không force) */}
+      <WelcomeModal />
     </div>
   );
 }

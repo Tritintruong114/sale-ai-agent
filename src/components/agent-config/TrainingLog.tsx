@@ -1,39 +1,32 @@
 "use client";
 
-import { CheckCircle2, FileText, GraduationCap, Loader2, Pencil, Sparkles } from "lucide-react";
+import { CheckCircle2, FileText, GraduationCap, Loader2, MessageSquare, Pencil, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { AgentAvatar } from "@/components/shared/AgentAvatar";
 import { cn } from "@/lib/utils";
 import { useAgentConfig } from "@/store/agentConfigStore";
+import { useTrainingStore, type TrainingEntry, type TrainingMethod } from "@/store/trainingStore";
 import trainingData from "@/data/training.json";
 
 // M6 — tab Đào tạo: nhật ký mỗi lần định nghĩa agent được cập nhật.
-// Nguồn (mock): Train with Manager (re-train), Tự học hằng ngày (áp insight đã duyệt), Sửa thủ công.
+// Nguồn: log tĩnh (mock) + entries người dùng thêm lúc chạy (vd "Dạy Agent từ hội thoại" ở Inbox — useTrainingStore).
 // Bảng theo style chung của prototype (§4.4 surface): wrapper ring + overflow-x, header muted, divide-y.
-
-type TrainingMethod = "manager" | "daily" | "manual";
-type TrainingEntry = {
-  id: string;
-  at: string;
-  method: TrainingMethod;
-  by: string;
-  scope: string;
-  summary: string;
-  files: string[];
-  status: "done" | "running";
-};
 
 const METHOD_META: Record<TrainingMethod, { label: string; icon: typeof GraduationCap; className: string }> = {
   manager: { label: "Train with Manager", icon: GraduationCap, className: "border-violet-200 bg-violet-100 text-violet-700" },
   daily: { label: "Tự học hằng ngày", icon: Sparkles, className: "border-sky-200 bg-sky-100 text-sky-700" },
   manual: { label: "Sửa thủ công", icon: Pencil, className: "border-foreground/15 bg-muted text-muted-foreground" },
+  conversation: { label: "Từ hội thoại", icon: MessageSquare, className: "border-indigo-200 bg-indigo-100 text-indigo-700" },
 };
 
-const log = trainingData.log as TrainingEntry[];
+const staticLog = trainingData.log as TrainingEntry[];
 
 export function TrainingLog() {
   // Tên + ảnh agent lấy từ nguồn sự thật chung (chọn lúc onboarding hoặc cập nhật ở tab Danh tính).
   const identity = useAgentConfig((s) => s.config.identity);
+  // Entries thêm lúc chạy (mới nhất) đứng trên log tĩnh.
+  const added = useTrainingStore((s) => s.added);
+  const log = [...added, ...staticLog];
 
   if (log.length === 0) {
     return (
@@ -58,7 +51,7 @@ export function TrainingLog() {
             <th scope="col" className="w-52">Đào tạo agent</th>
             <th scope="col" className="w-36">Thời gian</th>
             <th scope="col" className="w-44">Hình thức</th>
-            <th scope="col" className="w-72">Kết quả</th>
+            <th scope="col" className="w-72">Nội dung</th>
             <th scope="col" className="w-80">File cập nhật</th>
             <th scope="col" className="w-28">Trạng thái</th>
           </tr>
@@ -106,7 +99,7 @@ export function TrainingLog() {
                   ) : (
                     <Badge variant="outline" className="gap-1 text-amber-600">
                       <Loader2 className="size-3 animate-spin" aria-hidden />
-                      Đang chạy
+                      Đang đào tạo
                     </Badge>
                   )}
                 </td>

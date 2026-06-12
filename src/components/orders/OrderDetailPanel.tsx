@@ -2,6 +2,7 @@ import {
   ArrowRight,
   CalendarClock,
   Check,
+  CreditCard,
   MapPin,
   MessageSquare,
   StickyNote,
@@ -20,6 +21,8 @@ import {
   type Approval,
   type Order,
 } from "./meta";
+import { paymentForOrder, paymentTimeline } from "@/lib/orderPayment";
+import { PAY_STATE_META, payState, paymentTimelineIcon } from "@/components/payments/meta";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -38,17 +41,26 @@ export function OrderDetailPanel({
   onDecide,
   onAdvance,
   onViewConversation,
+  onViewPayment,
 }: {
   order: Order;
   onClose: () => void;
   onDecide: (id: string, approval: Approval) => void;
   onAdvance: (id: string) => void;
   onViewConversation: (conversationId: string) => void;
+  onViewPayment: (paymentId: string) => void;
 }) {
   const next = NEXT_STATUS[order.status];
   const canAdvance = next && order.approval !== "pending" && order.approval !== "rejected";
-  // timeline mới nhất lên đầu (ISO cùng định dạng → so sánh chuỗi).
-  const events = [...order.timeline].sort((a, b) => b.at.localeCompare(a.at));
+
+  // Khoản thu liên kết (nguồn chung) — quyết định chip trạng thái + diễn biến thanh toán, khớp màn Thanh toán.
+  const payment = paymentForOrder(order.id);
+  const payMeta = payment ? PAY_STATE_META[payState(payment)] : null;
+  // Diễn biến đơn = chỉ mốc vòng đời đơn; mốc thanh toán đẩy sang mục "Diễn biến thanh toán" để khỏi kể trùng/lệch.
+  const events = [...order.timeline]
+    .filter((e) => !e.label.toLowerCase().includes("thanh toán"))
+    .sort((a, b) => b.at.localeCompare(a.at));
+  const payEvents = payment ? [...paymentTimeline(payment)].sort((a, b) => b.at.localeCompare(a.at)) : [];
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -89,7 +101,16 @@ export function OrderDetailPanel({
         ) : (
           <div className="flex flex-wrap items-center gap-1.5">
             <ApprovalChip approval={order.approval} />
-            <PaymentChip status={order.paymentStatus} />
+            {/* Trạng thái thu tiền lấy từ khoản thu liên kết → cùng nhãn với màn Thanh toán
+                (Chờ bạn duyệt · Đã gửi QR · Đã thanh toán · Đã từ chối). Fallback chip cũ nếu chưa có khoản thu. */}
+            {payMeta ? (
+              <span className={cn("inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium", payMeta.chip)}>
+                <payMeta.icon className="size-3" aria-hidden />
+                {payMeta.label}
+              </span>
+            ) : (
+              <PaymentChip status={order.paymentStatus} />
+            )}
             <DeliveryChip status={order.deliveryStatus} />
           </div>
         )}
@@ -129,8 +150,8 @@ export function OrderDetailPanel({
           ) : null}
         </Section>
 
-        {/* Timeline */}
-        <Section title="Diễn biến đơn">
+        {/* Timeline — vòng đời đơn (đã tách mốc thanh toán sang mục dưới) */}
+        <Section title="Hoạt động">
           <ol className="relative space-y-3.5 before:absolute before:bottom-2 before:left-[15px] before:top-2 before:w-px before:bg-border">
             {events.map((ev, i) => {
               const Icon = timelineIcon(ev.label);
@@ -154,6 +175,34 @@ export function OrderDetailPanel({
             })}
           </ol>
         </Section>
+
+        {/* Diễn biến thanh toán — CÙNG nguồn & cách hiển thị với panel Thanh toán (khớp tuyệt đối). */}
+        {/* {payment ? (
+          <Section title="Hoạt động">
+            <ol className="relative space-y-3.5 before:absolute before:bottom-2 before:left-[15px] before:top-2 before:w-px before:bg-border">
+              {payEvents.map((ev, i) => {
+                const Icon = paymentTimelineIcon(ev.label);
+                return (
+                  <li key={`${ev.at}-${i}`} className="relative flex gap-3">
+                    <span
+                      aria-hidden
+                      className={cn("z-10 flex size-8 shrink-0 items-center justify-center rounded-full ring-1", TONE_RING[ev.tone])}
+                    >
+                      <Icon className="size-4" />
+                    </span>
+                    <div className="min-w-0 flex-1 pt-0.5">
+                      <p className="text-sm font-medium leading-tight">{ev.label}</p>
+                      <p className="mt-0.5 flex items-center gap-1 text-[11px] tabular-nums text-muted-foreground/80">
+                        <CalendarClock className="size-3" aria-hidden />
+                        {dateTime(ev.at)}
+                      </p>
+                    </div>
+                  </li>
+                );
+              })}
+            </ol>
+          </Section>
+        ) : null} */}
       </div>
 
       {/* Hành động */}
@@ -164,10 +213,18 @@ export function OrderDetailPanel({
             <ArrowRight className="size-4" aria-hidden />
           </Button>
         ) : null}
-        <Button variant="outline" className="w-full" onClick={() => onViewConversation(order.conversationId)}>
-          <MessageSquare className="size-4" aria-hidden />
-          Xem hội thoại
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" className="flex-1" onClick={() => onViewConversation(order.conversationId)}>
+            <MessageSquare className="size-4" aria-hidden />
+            Xem hội thoại
+          </Button>
+          {payment ? (
+            <Button variant="outline" className="flex-1" onClick={() => onViewPayment(payment.id)}>
+              <CreditCard className="size-4" aria-hidden />
+              Xem giao dịch
+            </Button>
+          ) : null}
+        </div>
       </div>
     </div>
   );

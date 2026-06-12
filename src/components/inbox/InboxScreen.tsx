@@ -13,7 +13,6 @@ import {
   PanelRightOpen,
   Search,
   Share2,
-  ShoppingBag,
   X,
 } from "lucide-react";
 import { ChatWindow } from "@/components/shared/chat/ChatWindow";
@@ -159,7 +158,7 @@ function ConversationButton({
           {human ? (
             <span className="flex items-center gap-1 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">
               <Flag className="size-2.5" aria-hidden />
-              Cần người
+              Cần bạn trả lời
             </span>
           ) : c.agentActive ? (
             <span className="flex items-center gap-1 text-[10px] text-violet-600">
@@ -197,7 +196,7 @@ type AttentionFilter = "all" | "handoff" | "agent";
 
 const ATTENTION_OPTIONS: { key: AttentionFilter; label: string }[] = [
   { key: "all", label: "Mọi hội thoại" },
-  { key: "handoff", label: "Cần người" },
+  { key: "handoff", label: "Cần bạn trả lời" },
   { key: "agent", label: "Agent đang trả lời" },
 ];
 
@@ -272,8 +271,8 @@ export function InboxScreen({
   // Master-detail trên mobile: false = đang xem danh sách, true = đang mở hội thoại.
   const [chatOpenMobile, setChatOpenMobile] = useState(false);
   // Panel hồ sơ khách: cố định ở cột phải từ xl trở lên; dưới xl mở dạng overlay.
-  const [panelOpen, setPanelOpen] = useState(false);
-
+  const [panelOpen, setPanelOpen] = useState(false); // overlay hồ sơ khách (dưới lg)
+  const [infoCollapsed, setInfoCollapsed] = useState(false); // thu gọn cột hồ sơ khách (lg+)
   const counts = useMemo(() => {
     const m: Record<string, number> = { all: conversations.length };
     for (const c of conversations) m[c.status] = (m[c.status] ?? 0) + 1;
@@ -372,19 +371,28 @@ export function InboxScreen({
         {
           id: `local-${selectedId}-${e.sent?.length ?? 0}`,
           role: "system",
-          text: "Bạn đã nhận việc — agent tạm dừng để bạn xử lý",
+          text: "Bạn đã nhận bàn giao — agent tạm dừng để bạn xử lý",
         },
       ],
     }));
   };
 
   return (
-    <div className="flex h-[calc(100dvh-5.5rem)] flex-col gap-3 md:h-[calc(100dvh-6.5rem)]">
-      <div className="grid min-h-0 flex-1 gap-3 md:grid-cols-[20rem_1fr] lg:grid-cols-[17rem_1fr_19rem] xl:grid-cols-[20rem_1fr_21rem]">
-        {/* Danh sách hội thoại */}
+    <div className="flex h-[calc(100dvh-5.5rem)] flex-col gap-4 md:h-[calc(100dvh-6.5rem)]">
+      {/* Một khối liền: 3 cột dán sát trong cùng một thẻ, ngăn nhau bằng đường kẻ dọc (không gap, không thẻ rời). */}
+      <div
+        className={cn(
+          "grid min-h-0 flex-1 overflow-hidden rounded-xl bg-card ring-1 ring-foreground/10 md:grid-cols-[20rem_1fr]",
+          // Thu gọn → bỏ cột hồ sơ, khung chat giãn rộng (lg+). Mặc định 3 cột.
+          infoCollapsed
+            ? "lg:grid-cols-[17rem_1fr] xl:grid-cols-[20rem_1fr]"
+            : "lg:grid-cols-[17rem_1fr_19rem] xl:grid-cols-[20rem_1fr_21rem]",
+        )}
+      >
+        {/* Danh sách hội thoại — cột trái, kẻ dọc ngăn với khung chat */}
         <div
           className={cn(
-            "min-h-0 flex-col rounded-xl bg-card ring-1 ring-foreground/10",
+            "min-h-0 flex-col md:border-r",
             chatOpenMobile ? "hidden md:flex" : "flex",
           )}
         >
@@ -568,7 +576,7 @@ export function InboxScreen({
           </div>
 
           {/* Danh sách */}
-          <div className="min-h-0 flex-1 overflow-auto p-1.5">
+          <div className="min-h-0 flex-1 overflow-auto p-1.5 scrollbar-hide">
             {conversations.length === 0 ? (
               // Chưa có hội thoại nào (trạng thái "Chưa có dữ liệu", hoặc realtime chưa khởi động)
               <div className="flex h-full flex-col items-center justify-center gap-1.5 px-4 text-center">
@@ -584,7 +592,7 @@ export function InboxScreen({
                   {query ? "Không tìm thấy hội thoại phù hợp." : "Chưa có hội thoại ở trạng thái này."}
                 </p>
                 <Button variant="outline" size="sm" onClick={resetFilters}>
-                  Xoá bộ lọc
+                  Xoá lọc
                 </Button>
               </div>
             ) : (
@@ -595,10 +603,11 @@ export function InboxScreen({
           </div>
         </div>
 
-        {/* Khung chat */}
+        {/* Khung chat — cột giữa; kẻ dọc ngăn với cột hồ sơ khi cột này còn hiện (lg+, chưa thu gọn) */}
         <div
           className={cn(
-            "min-h-0 flex-col rounded-xl bg-card ring-1 ring-foreground/10",
+            "min-h-0 flex-col",
+            !infoCollapsed && "lg:border-r",
             chatOpenMobile ? "flex" : "hidden md:flex",
           )}
         >
@@ -636,45 +645,61 @@ export function InboxScreen({
                     <span className={cn("ml-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium", STATUS_META[selected.status].cls)}>
                       {STATUS_META[selected.status].label}
                     </span>
-                    {selected.orderId ? (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="ml-auto"
-                        onClick={() => router.push(`/orders?o=${selected.orderId}`)}
-                      >
-                        <ShoppingBag className="size-3.5" aria-hidden />
-                        <span className="hidden sm:inline">Xem đơn {selected.orderId}</span>
-                        <span className="sm:hidden">Đơn</span>
-                      </Button>
-                    ) : null}
                     {/* Mở hồ sơ khách — dưới lg panel không cố định nên hiện nút mở overlay */}
                     <Button
                       variant="ghost"
                       size="icon-sm"
-                      className={cn("lg:hidden", selected.orderId ? "" : "ml-auto")}
+                      className="ml-auto lg:hidden"
                       onClick={() => setPanelOpen(true)}
                       aria-label="Mở thông tin khách"
                     >
                       <PanelRightOpen />
                     </Button>
+                    {/* lg+: khi đã thu gọn cột hồ sơ → nút mở lại */}
+                    {infoCollapsed ? (
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        className="ml-auto hidden lg:inline-flex"
+                        onClick={() => setInfoCollapsed(false)}
+                        aria-label="Mở thông tin khách"
+                        title="Mở thông tin khách"
+                      >
+                        <PanelRightOpen />
+                      </Button>
+                    ) : null}
                   </div>
 
-                  {/* Bật / tắt agent tư vấn cho riêng hội thoại này */}
-                  <div className="flex items-center justify-between gap-2 rounded-lg bg-muted/50 px-2.5 py-1.5">
-                    <span className="flex items-center gap-1.5 text-xs font-medium text-foreground">
-                      <Bot className="size-3.5 text-violet-600" aria-hidden />
-                      Agent tự trả lời khách
-                    </span>
-                    <label className="flex cursor-pointer items-center gap-2">
-                      <span className="text-xs text-muted-foreground">
-                        {selected.agentActive ? "Đang bật" : "Đang tắt"}
+                  {/* Thẻ điều khiển Agent cho riêng hội thoại — tô tím khi agent đang trực (highlight trạng thái chính). */}
+                  <div
+                    className={cn(
+                      "overflow-hidden rounded-lg ring-1 transition-colors",
+                      selected.agentActive ? "bg-violet-50 ring-violet-200" : "bg-muted/50 ring-foreground/10",
+                    )}
+                  >
+                    {/* Bật / tắt agent tự trả lời */}
+                    <label className="flex cursor-pointer items-center justify-between gap-2 px-2.5 py-2">
+                      <span className="flex items-center gap-1.5 text-xs font-medium">
+                        <span
+                          className={cn(
+                            "flex size-5 shrink-0 items-center justify-center rounded-full",
+                            selected.agentActive ? "bg-violet-600 text-white" : "bg-muted-foreground/15 text-muted-foreground",
+                          )}
+                        >
+                          <Bot className="size-3" aria-hidden />
+                        </span>
+                        Agent tự động tư vấn
                       </span>
-                      <Switch
-                        checked={selected.agentActive}
-                        onCheckedChange={(v) => toggleAgent(Boolean(v))}
-                        aria-label="Bật hoặc tắt agent tự trả lời cho hội thoại này"
-                      />
+                      <span className="flex items-center gap-2">
+                        <span className={cn("text-xs font-medium", selected.agentActive ? "text-violet-700" : "text-muted-foreground")}>
+                          {selected.agentActive ? "Đang bật" : "Đang tắt"}
+                        </span>
+                        <Switch
+                          checked={selected.agentActive}
+                          onCheckedChange={(v) => toggleAgent(Boolean(v))}
+                          aria-label="Bật hoặc tắt agent tự trả lời cho hội thoại này"
+                        />
+                      </span>
                     </label>
                   </div>
 
@@ -682,16 +707,16 @@ export function InboxScreen({
                     <div className="flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-sm ring-1 ring-amber-200">
                       <Flag className="size-4 shrink-0 text-amber-600" aria-hidden />
                       <span className="text-amber-800">
-                        Cần người: <span className="font-medium">{selected.handoff.reason}</span>
+                        Cần bạn trả lời: <span className="font-medium">{selected.handoff.reason}</span>
                       </span>
                       <Button size="sm" className="ml-auto" onClick={takeOver}>
-                        Nhận việc
+                        Nhận bàn giao
                       </Button>
                     </div>
                   ) : selected.handoff?.acknowledged ? (
                     <Badge variant="secondary" className="gap-1">
                       <Flag className="size-3" aria-hidden />
-                      Bạn đã nhận việc này
+                      Bạn đã nhận bàn giao
                     </Badge>
                   ) : null}
                 </div>
@@ -704,14 +729,15 @@ export function InboxScreen({
           )}
         </div>
 
-        {/* Panel hồ sơ khách — cột phải cố định từ lg */}
-        <div className="hidden min-h-0 rounded-xl bg-card ring-1 ring-foreground/10 lg:flex">
+        {/* Panel hồ sơ khách — cột phải cố định từ lg (ẩn khi thu gọn) */}
+        <div className={cn("hidden min-h-0 lg:flex", infoCollapsed && "lg:hidden")}>
           {selected ? (
             <CustomerPanel
               conversation={selected}
               profile={profiles[selected.id] ?? null}
               onSaveProfile={(next) => saveProfile(selected.id, next)}
               onOpenOrder={(orderId) => router.push(`/orders?o=${orderId}`)}
+              onCollapse={() => setInfoCollapsed(true)}
             />
           ) : (
             <div className="flex flex-1 items-center justify-center px-4 text-center text-sm text-muted-foreground">

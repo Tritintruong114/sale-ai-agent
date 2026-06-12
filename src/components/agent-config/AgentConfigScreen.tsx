@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, ChevronRight, Download, Eye, FileText, GraduationCap, Hand, MoreVertical, Pencil, Plus, Send, Sparkles, Trash2, Upload, X } from "lucide-react";
+import { Check, ChevronRight, Clock, Download, Eye, FileText, GraduationCap, Hand, MessageSquare, MoreVertical, Pencil, Plus, Sparkles, Trash2, Upload, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -12,15 +12,14 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { ZaloIcon } from "@/components/icons/channel";
 import { AgentAvatar } from "@/components/shared/AgentAvatar";
 import { cn } from "@/lib/utils";
 import { useAgentConfig } from "@/store/agentConfigStore";
-import { type HandoffRule, type HandoffCategory } from "@/data/config";
+import { type HandoffRule, type DayHours, type WeekdayKey, WEEKDAYS } from "@/data/config";
 import { useUiStore } from "@/store/uiStore";
 import { AGENT_CONFIG_SECTIONS, type AgentConfigTab } from "./sections";
-import { LearningApprovalQueue } from "./LearningApprovalQueue";
 import { TrainingLog } from "./TrainingLog";
+import { NotifyChannelDialog, NotifyChannelRow, type NotifyChannelKey } from "./NotifyChannelDialog";
 import { BYOK_PROVIDERS } from "@/data/onboarding";
 import { AGENT_FILES, type AgentFile } from "@/data/agentFiles";
 import learningData from "@/data/learning.json";
@@ -32,20 +31,38 @@ import trainingData from "@/data/training.json";
 // empty state (§6.6), URL reflect hai chiều (§6.11/§10). Nhóm config form đọc dễ ở max-w-3xl (line-length).
 // Nhóm Học hằng ngày: config (enabled/runAt/sources) từ store; nhật ký + Manager update từ learning.json (mock).
 
-type Journal = { id: string; insight: string; source: string; status: "pending" | "approved" | "dismissed" };
+// Daily learn (§6.1) — tóm tắt mỗi ngày agent học được gì + học từ đâu (read-only, chỉ để xem).
+// Mỗi ngày gồm các "điều học được" theo nguồn: bàn giao / chủ shop tư vấn / tình huống đặc biệt.
+type LearnCaseType = "handoff" | "owner" | "special";
+type LearnCase = { id: string; type: LearnCaseType; insight: string; from: string };
+type LearnDay = { id: string; date: string; summary: string; cases: LearnCase[] };
+
+// Nhãn + màu cho từng nguồn agent học được (§5 chip — màu phân biệt nguồn, không phải mức độ).
+const LEARN_CASE_META: Record<LearnCaseType, { label: string; icon: typeof Hand; className: string }> = {
+  handoff: { label: "Bàn giao", icon: Hand, className: "border-indigo-200 bg-indigo-50 text-indigo-700" },
+  owner: { label: "Bạn tư vấn khách", icon: MessageSquare, className: "border-violet-200 bg-violet-50 text-violet-700" },
+  special: { label: "Tình huống đặc biệt", icon: Sparkles, className: "border-rose-200 bg-rose-50 text-rose-700" },
+};
+
+// Danh sách "Agent học từ đâu" (nguồn) tạm ẩn ở UI — giữ dữ liệu trong learning.json. Đặt true để hiện lại.
+const LEARNING_SOURCES_LIST_ENABLED = false;
+
+// Giờ trực của agent tạm ẩn ở UI (chưa có logic thực thi runtime). Đặt true để hiện lại.
+const ACTIVE_HOURS_ENABLED = false;
+
+// Giờ trực mặc định khi chủ shop bật lần đầu (config cũ trong localStorage chưa có activeHours).
+const DEFAULT_ACTIVE_WEEKLY: Record<WeekdayKey, DayHours> = {
+  mon: { closed: false, open: "08:00", close: "22:00" },
+  tue: { closed: false, open: "08:00", close: "22:00" },
+  wed: { closed: false, open: "08:00", close: "22:00" },
+  thu: { closed: false, open: "08:00", close: "22:00" },
+  fri: { closed: false, open: "08:00", close: "22:00" },
+  sat: { closed: false, open: "08:00", close: "22:00" },
+  sun: { closed: false, open: "08:00", close: "22:00" },
+};
 
 const NOTIFY_EVENTS = [
-  { key: "handoff", label: "Hội thoại cần người", hint: "Khi agent dừng và nhường bạn trả lời khách" },
-  { key: "big_order", label: "Đơn cần duyệt", hint: "Khi agent cần bạn xác nhận trước khi chốt đơn" },
-  { key: "payment", label: "Thanh toán cần duyệt", hint: "Khi agent cần bạn xác nhận một khoản thanh toán" },
-];
-
-// Nhóm tình huống bàn giao — gom cho dễ quét, kèm câu gợi ý mục đích từng nhóm.
-const HANDOFF_CATEGORIES: { key: HandoffCategory; label: string; hint: string }[] = [
-  { key: "opportunity", label: "Cơ hội bán", hint: "Lúc nên có người thật để chốt đơn nhanh." },
-  { key: "risk", label: "Rủi ro – phàn nàn", hint: "Lúc cần bạn xử lý khéo để giữ khách." },
-  { key: "capability", label: "Vượt năng lực agent", hint: "Lúc agent chưa đủ thông tin để tự trả lời." },
-];
+  { key: "handoff", label: "Khi Agent bàn giao", hint: "Khi agent dừng" }];
 
 // Sinh key duy nhất cho tình huống chủ shop tự thêm (bỏ dấu, gạch dưới, tránh trùng).
 function makeHandoffKey(label: string, taken: string[]): string {
@@ -71,7 +88,8 @@ export function AgentConfigScreen({ initialTab }: { initialTab?: string }) {
   const setTab = useUiStore((s) => s.setAgentConfigTab);
   const setAgentChatOpen = useUiStore((s) => s.setAgentChatOpen);
   const pushAgentChatDraft = useUiStore((s) => s.pushAgentChatDraft);
-  const [journal, setJournal] = useState<Journal[]>(learningData.journal as Journal[]);
+  const startHandoffSuggest = useUiStore((s) => s.startHandoffSuggest);
+  const learnDays = learningData.dailyLearn as LearnDay[]; // read-only summarize — chỉ để xem
   const avatarInput = useRef<HTMLInputElement>(null);
   const fileImport = useRef<HTMLInputElement>(null);
 
@@ -88,12 +106,40 @@ export function AgentConfigScreen({ initialTab }: { initialTab?: string }) {
   const [preview, setPreview] = useState<AgentFile | null>(null); // đang xem
   const [editing, setEditing] = useState<AgentFile | null>(null); // đang sửa
   const [deleting, setDeleting] = useState<AgentFile | null>(null); // chờ xác nhận xoá
+  const [notifyDialog, setNotifyDialog] = useState<NotifyChannelKey | null>(null); // modal kết nối kênh thông báo
+
+  // Nối kênh thông báo: lưu cờ đã nối + token bot dùng để gửi tin.
+  const connectNotify = (channel: NotifyChannelKey, value: string) => {
+    setConfig({
+      notifyChannels: {
+        ...config.notifyChannels,
+        [channel]: true,
+        ...(channel === "telegram" ? { telegramToken: value } : { zaloToken: value }),
+      },
+    });
+    setNotifyDialog(null);
+  };
+  const disconnectNotify = (channel: NotifyChannelKey) =>
+    setConfig({
+      notifyChannels: {
+        ...config.notifyChannels,
+        [channel]: false,
+        ...(channel === "telegram" ? { telegramToken: undefined } : { zaloToken: undefined }),
+      },
+    });
 
   // Đổi ảnh đại diện agent — prototype: tạo URL tạm, không upload thật (giống Onboarding bước tạo agent).
   const onPickAvatar = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) setConfig({ identity: { ...config.identity, avatar: URL.createObjectURL(file) } });
   };
+
+  // Giờ trực của agent — bật/tắt cả khối hoặc sửa lịch theo từng ngày. Fallback lịch mặc định cho config cũ.
+  const activeHours = config.identity.activeHours ?? { enabled: false, weekly: DEFAULT_ACTIVE_WEEKLY };
+  const setActiveHours = (patch: Partial<{ enabled: boolean; weekly: Record<WeekdayKey, DayHours> }>) =>
+    setConfig({ identity: { ...config.identity, activeHours: { ...activeHours, ...patch } } });
+  const setActiveDay = (key: WeekdayKey, patch: Partial<DayHours>) =>
+    setActiveHours({ weekly: { ...activeHours.weekly, [key]: { ...activeHours.weekly[key], ...patch } } });
 
   // Thêm file = tải file .md lên: đọc nội dung, lấy tên file làm tiêu đề tạm — chỉnh lại sau bằng nút Sửa.
   const onImportFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -137,6 +183,11 @@ export function AgentConfigScreen({ initialTab }: { initialTab?: string }) {
     pushAgentChatDraft(`Tiến hành skills /re-train toàn bộ định nghĩa của agent ${config.identity.name}`);
   };
 
+  // Gợi ý câu mẫu với Manager: mở panel chat + điền sẵn prompt nhờ agent gợi ý ví dụ khách nói cho tình huống bàn giao.
+  // Chủ shop chỉnh prompt rồi gửi; câu agent gợi ý có thể thêm lại vào danh sách "Ví dụ khách nói".
+  const suggestPhrases = (ruleKey: string, label: string, description?: string) =>
+    startHandoffSuggest({ ruleKey, label: label.trim() || "Tình huống mới", description: description?.trim() || undefined });
+
   // Deep-link ?tab= từ route → đồng bộ vào composite list trên TopBar khi vào màn (§6.11).
   useEffect(() => {
     if (initialTab && AGENT_CONFIG_SECTIONS.some((s) => s.key === initialTab)) {
@@ -145,27 +196,21 @@ export function AgentConfigScreen({ initialTab }: { initialTab?: string }) {
   }, [initialTab, setTab]);
 
   // …và đổi nhóm thì ghi ngược lên thanh địa chỉ (replace, không nhảy cuộn) — link chia sẻ + back đúng nhóm.
-  // Bỏ qua khi URL đã khớp để khỏi replace thừa (tránh nháy ?tab= lúc deep-link mới vào).
+  // Đọc tab SỐNG từ store (getState), KHÔNG dùng biến closure: lúc mount deep-link vừa set store theo ?tab=,
+  // nên reflect không ghi đè ngược về tab mặc định → không bounce. An toàn cả khi Strict Mode gọi effect 2 lần.
   useEffect(() => {
+    const liveTab = useUiStore.getState().agentConfigTab;
     const current = new URLSearchParams(window.location.search).get("tab");
-    if (current !== tab) router.replace(`/agent-config?tab=${tab}`, { scroll: false });
+    if (current !== liveTab) router.replace(`/agent-config?tab=${liveTab}`, { scroll: false });
   }, [tab, router]);
 
-  // Ribbon "Xem" → cuộn xuống danh sách điều chờ duyệt (scroll-mt chừa chỗ cho topbar + ribbon).
-  const scrollToJournal = () => {
-    document.getElementById("journal")?.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
-
   // Tóm tắt nhật ký đào tạo cho lede tab Đào tạo — log đã xếp mới→cũ nên phần tử đầu là gần nhất.
-  const trainingCount = trainingData.log.length;
   const lastTrainedAt = trainingData.log[0] ? formatTrainedAt(trainingData.log[0].at) : "—";
 
-  const pendingJournal = journal.filter((j) => j.status === "pending");
+  // Daily learn chỉ để xem (read-only summarize) — không có duyệt/bỏ. Tổng số điều học gần đây cho lede.
+  const learnedCount = learnDays.reduce((n, d) => n + d.cases.length, 0);
   const handoffOn = config.handoffRules.filter((r) => r.enabled).length;
   const notifyChannelsOn = [config.notifyChannels.telegram, config.notifyChannels.zalo].filter(Boolean).length;
-
-  const setJournalStatus = (id: string, status: Journal["status"]) =>
-    setJournal((prev) => prev.map((x) => (x.id === id ? { ...x, status } : x)));
 
   return (
     // Màn config = trang cuộn (§6.1); form đọc dễ ở bề rộng vừa phải (line-length-control).
@@ -174,26 +219,17 @@ export function AgentConfigScreen({ initialTab }: { initialTab?: string }) {
       <Tabs value={tab} onValueChange={(v) => setTab(v as AgentConfigTab)}>
         {/* M6.1 — Học hằng ngày (G2) */}
         <TabsContent value="learning" className="space-y-5">
-          {/* Ribbon HITL dưới topbar (§6.7) — tóm tắt điều chờ duyệt, "Xem" cuộn xuống danh sách. */}
-          {config.dailyLearning.enabled ? (
-            <LearningApprovalQueue
-              pending={pendingJournal.length}
-              hasJournal={journal.length > 0}
-              onView={scrollToJournal}
-            />
-          ) : null}
-
-          <GroupHeader context="Duyệt điều agent học được mỗi ngày trước khi áp dụng.">
+          <GroupHeader context="Mỗi ngày agent tự động học và tối ưu bản thân">
             {config.dailyLearning.enabled ? (
-              pendingJournal.length > 0 ? (
+              learnedCount > 0 ? (
                 <>
-                  Có <span className="text-amber-600">{pendingJournal.length} điều chờ bạn duyệt</span> trước khi áp dụng vào câu trả lời.
+                Agent sẽ tự động học và tự động cải thiện
                 </>
               ) : (
-                <span className="text-emerald-600">Không còn điều nào chờ duyệt — agent đang học đều mỗi ngày.</span>
+                <span className="text-muted-foreground">Agent sẽ tự động học và cải thiện mỗi ngày.</span>
               )
             ) : (
-              <span className="text-muted-foreground">Tự học đang tắt — bật để agent cải thiện theo ngày.</span>
+              <span className="text-muted-foreground">Agent sẽ tự động học và cải thiện mỗi ngày.</span>
             )}
           </GroupHeader>
 
@@ -203,7 +239,7 @@ export function AgentConfigScreen({ initialTab }: { initialTab?: string }) {
                 checked={config.dailyLearning.enabled}
                 onCheckedChange={(v) => setConfig({ dailyLearning: { ...config.dailyLearning, enabled: v } })}
                 label="Bật tự học hằng ngày"
-                hint="Agent tổng hợp điều học được rồi xin bạn duyệt"
+                // hint="Agent tổng hợp điều học được mỗi ngày thành bản tóm tắt"
               />
               {config.dailyLearning.enabled ? (
                 <>
@@ -215,94 +251,47 @@ export function AgentConfigScreen({ initialTab }: { initialTab?: string }) {
                       onChange={(e) => setConfig({ dailyLearning: { ...config.dailyLearning, runAt: e.target.value } })}
                     />
                   </Row>
-                  <div className="space-y-2">
-                    <SubHead>Agent học từ đâu</SubHead>
-                    {config.dailyLearning.sources.map((s, i) => (
-                      <SwitchRow
-                        key={s.key}
-                        checked={s.enabled}
-                        onCheckedChange={(v) => {
-                          const sources = config.dailyLearning.sources.map((x, j) => (j === i ? { ...x, enabled: v } : x));
-                          setConfig({ dailyLearning: { ...config.dailyLearning, sources } });
-                        }}
-                        label={s.label}
-                        right={<Badge variant="secondary" className="tabular-nums">{s.count}</Badge>}
-                      />
-                    ))}
-                  </div>
+                  {/* Danh sách "Agent học từ đâu" tạm ẩn (xem LEARNING_SOURCES_LIST_ENABLED). */}
+                  {LEARNING_SOURCES_LIST_ENABLED ? (
+                    <div className="space-y-2">
+                      <SubHead>Agent học từ đâu</SubHead>
+                      {config.dailyLearning.sources.map((s, i) => (
+                        <SwitchRow
+                          key={s.key}
+                          checked={s.enabled}
+                          onCheckedChange={(v) => {
+                            const sources = config.dailyLearning.sources.map((x, j) => (j === i ? { ...x, enabled: v } : x));
+                            setConfig({ dailyLearning: { ...config.dailyLearning, sources } });
+                          }}
+                          label={s.label}
+                          right={<Badge variant="secondary" className="tabular-nums">{s.count}</Badge>}
+                        />
+                      ))}
+                    </div>
+                  ) : null}
                 </>
               ) : null}
             </CardContent>
           </Card>
 
-          {/* Nhật ký học — duyệt HITL: tóm tắt nằm ở ribbon trên topbar; ở đây là danh sách điều chờ duyệt.
-              id="journal" + scroll-mt-20 để nút "Xem" trên ribbon cuộn xuống, không bị topbar che. */}
+          {/* Daily learn — tóm tắt theo ngày (read-only): mỗi ngày agent học được gì, học từ đâu
+              (bàn giao / chủ shop tư vấn / tình huống đặc biệt). Chỉ để xem, không có duyệt/bỏ. */}
           {config.dailyLearning.enabled ? (
-            <section id="journal" className="scroll-mt-20 space-y-2" aria-label="Nhật ký học hôm nay">
-              {journal.length === 0 ? (
+            <section className="space-y-3" aria-label="Daily learn — tóm tắt học theo ngày">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                <GraduationCap className="size-4 shrink-0 text-violet-600" aria-hidden />
+                <h2 className="text-sm font-semibold">Daily learn</h2>
+                {/* <span className="text-xs text-muted-foreground">tóm tắt mỗi ngày agent học được gì và học từ đâu</span> */}
+              </div>
+              {learnDays.length === 0 ? (
                 <EmptyState
                   icon={Sparkles}
-                  title="Chưa có điều nào để học hôm nay"
-                  description="Khi agent rút ra điều mới từ hội thoại, nó sẽ ghi vào đây và xin bạn duyệt."
+                  title="Chưa có ngày học nào"
+                  description="Mỗi tối agent tổng hợp điều rút ra từ hội thoại trong ngày và ghi tóm tắt vào đây."
                 />
-              ) : pendingJournal.length > 0 ? (
-                <Card size="sm">
-                  <CardContent className="space-y-1.5">
-                    <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                      <GraduationCap className="size-4 shrink-0 text-amber-600" aria-hidden />
-                      <h2 className="text-sm font-semibold">Điều chờ bạn duyệt · {pendingJournal.length}</h2>
-                      <span className="text-xs text-muted-foreground">duyệt trước khi agent áp dụng vào câu trả lời</span>
-                    </div>
-                    <ul className="space-y-1.5">
-                      {pendingJournal.map((j) => (
-                        <li key={j.id} className="flex flex-wrap items-start gap-3 rounded-lg px-3 py-2.5 ring-1 ring-amber-200/80">
-                          <span className="flex-1 text-sm">{j.insight}</span>
-                          <div className="ml-auto flex shrink-0 gap-1.5">
-                            <Button size="xs" onClick={() => setJournalStatus(j.id, "approved")}>
-                              <Check className="size-3" aria-hidden />
-                              Duyệt
-                            </Button>
-                            <Button size="xs" variant="ghost" onClick={() => setJournalStatus(j.id, "dismissed")}>
-                              Bỏ qua
-                            </Button>
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
-                  </CardContent>
-                </Card>
-              ) : null}
-
-              {/* Lịch sử điều đã xử lý — chip trạng thái §5 (màu + nhãn). */}
-              {journal.some((j) => j.status !== "pending") ? (
-                <Card size="sm">
-                  <CardContent className="space-y-1.5">
-                    <SubHead>Đã xử lý hôm nay</SubHead>
-                    {journal
-                      .filter((j) => j.status !== "pending")
-                      .map((j) => (
-                        <div key={j.id} className="flex items-start gap-3 rounded-lg px-3 py-2 ring-1 ring-foreground/10">
-                          <span className="flex-1 text-sm text-muted-foreground">{j.insight}</span>
-                          {j.status === "approved" ? (
-                            <Badge className="shrink-0 gap-1 border-emerald-200 bg-emerald-100 text-emerald-700">
-                              <Check aria-hidden />
-                              Đã duyệt
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="shrink-0 gap-1 text-muted-foreground">
-                              <X aria-hidden />
-                              Đã bỏ
-                            </Badge>
-                          )}
-                        </div>
-                      ))}
-                    <p className="flex items-center gap-1.5 pt-1 text-xs text-muted-foreground">
-                      <GraduationCap className="size-3.5 text-violet-600" aria-hidden />
-                      {learningData.managerUpdates.summary}
-                    </p>
-                  </CardContent>
-                </Card>
-              ) : null}
+              ) : (
+                learnDays.map((day) => <DailyLearnCard key={day.id} day={day} />)
+              )}
             </section>
           ) : null}
         </TabsContent>
@@ -311,7 +300,7 @@ export function AgentConfigScreen({ initialTab }: { initialTab?: string }) {
         <TabsContent value="training" className="space-y-5">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <GroupHeader context="Theo dõi mỗi lần agent được đào tạo và những gì đã thay đổi.">
-              Đã đào tạo <span className="text-foreground">{trainingCount} lần</span> — lần gần nhất {lastTrainedAt}.
+              Đào tạo gần nhất <span className="text-foreground">{lastTrainedAt}</span>.
             </GroupHeader>
             <Button size="sm" onClick={trainAgent}>
               <GraduationCap className="size-4" aria-hidden />
@@ -323,7 +312,7 @@ export function AgentConfigScreen({ initialTab }: { initialTab?: string }) {
 
         {/* M6.3 — Hand-off */}
         <TabsContent value="handoff" className="space-y-5">
-          <GroupHeader context="Chọn lúc agent nên dừng lại và nhường bạn xử lý trực tiếp với khách.">
+          <GroupHeader context="Chọn lúc agent nên dừng lại và bàn giao cho bạn xử lý.">
             {handoffOn > 0 ? (
               <>
                 Đang bật <span className="text-foreground">{handoffOn}/{config.handoffRules.length}</span> tình huống bàn giao cho bạn.
@@ -337,42 +326,34 @@ export function AgentConfigScreen({ initialTab }: { initialTab?: string }) {
           <div className="flex gap-3 rounded-xl bg-muted/40 p-3.5 ring-1 ring-foreground/10">
             <Hand className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
             <p className="text-sm text-muted-foreground">
-              <span className="font-medium text-foreground">Bàn giao</span> là khi agent tự dừng trả lời và chuyển hội thoại cho bạn. Lúc đó bạn nhận tin báo rồi tiếp nhận trực tiếp với khách —{" "}
+              <span className="font-medium text-foreground">Bàn giao</span> là khi agent tự dừng trả lời và chuyển hội thoại cho bạn. Lúc đó bạn nhận thông báo rồi tiếp nhận trao đổi với khách —{" "}
               <button
                 type="button"
                 onClick={() => setTab("notify")}
                 className="font-medium text-foreground underline decoration-foreground/30 underline-offset-2 hover:decoration-foreground"
               >
-                chọn nơi nhận tin báo
+                chọn nơi nhận thông báo
               </button>
               .
             </p>
           </div>
 
-          {/* Gom theo nhóm cho dễ quét; mỗi rule có mô tả + ví dụ câu khách nói sửa được. */}
-          {HANDOFF_CATEGORIES.map((cat) => {
-            const rules = config.handoffRules.filter((r) => r.category === cat.key);
-            if (rules.length === 0) return null;
-            return (
-              <div key={cat.key} className="space-y-2">
-                <SubHead>{cat.label}</SubHead>
-                <Card size="sm">
-                  <CardContent className="space-y-2">
-                    {rules.map((r) => (
-                      <HandoffRuleRow
-                        key={r.key}
-                        rule={r}
-                        onToggle={(v) => updateHandoffRule(r.key, { enabled: v })}
-                        onThreshold={(n) => updateHandoffRule(r.key, { threshold: n })}
-                        onPhrasesChange={(phrases) => updateHandoffRule(r.key, { triggerPhrases: phrases })}
-                        onRemove={() => removeHandoffRule(r.key)}
-                      />
-                    ))}
-                  </CardContent>
-                </Card>
-              </div>
-            );
-          })}
+          {/* Danh sách phẳng — mỗi tình huống có mô tả + ví dụ câu khách nói sửa được. */}
+          <Card size="sm">
+            <CardContent className="space-y-2">
+              {config.handoffRules.map((r) => (
+                <HandoffRuleRow
+                  key={r.key}
+                  rule={r}
+                  onToggle={(v) => updateHandoffRule(r.key, { enabled: v })}
+                  onThreshold={(n) => updateHandoffRule(r.key, { threshold: n })}
+                  onPhrasesChange={(phrases) => updateHandoffRule(r.key, { triggerPhrases: phrases })}
+                  onSuggest={() => suggestPhrases(r.key, r.label, r.description)}
+                  onRemove={() => removeHandoffRule(r.key)}
+                />
+              ))}
+            </CardContent>
+          </Card>
 
           <Button
             type="button"
@@ -389,14 +370,20 @@ export function AgentConfigScreen({ initialTab }: { initialTab?: string }) {
             onOpenChange={setAddingHandoff}
             existingKeys={config.handoffRules.map((r) => r.key)}
             onAdd={(rule) => setConfig({ handoffRules: [...config.handoffRules, rule] })}
+            onSuggest={(label, description) =>
+              suggestPhrases(
+                makeHandoffKey(label || "tinh huong moi", config.handoffRules.map((r) => r.key)),
+                label,
+                description,
+              )
+            }
           />
         </TabsContent>
 
         {/* M6.4 — Danh tính */}
         <TabsContent value="identity" className="space-y-5">
-          <GroupHeader context="Cách agent xuất hiện với khách — tên, xưng hô, lời chào.">
-            <span className="text-foreground">{config.identity.name}</span> · xưng{" "}
-            <span className="text-foreground">{config.identity.pronoun}</span>.
+          <GroupHeader context="Tính cách và giọng điệu của agent khi tư vấn cho khách.">
+            <span className="text-foreground">{config.identity.name}</span>
           </GroupHeader>
 
           <Card size="sm">
@@ -420,7 +407,7 @@ export function AgentConfigScreen({ initialTab }: { initialTab?: string }) {
                       </Button>
                     ) : null}
                   </div>
-                  <p className="text-xs text-muted-foreground">Chưa có ảnh thì agent dùng ảnh tạo từ tên.</p>
+                  {/* <p className="text-xs text-muted-foreground">Chưa có ảnh thì agent dùng ảnh tạo từ tên.</p> */}
                   <input ref={avatarInput} type="file" accept="image/*" className="hidden" onChange={onPickAvatar} />
                 </div>
               </div>
@@ -436,15 +423,68 @@ export function AgentConfigScreen({ initialTab }: { initialTab?: string }) {
             </CardContent>
           </Card>
 
+          {/* Giờ trực — bật/tắt; bật thì agent chỉ tự trả lời trong khung giờ đặt, ngoài giờ tự Tạm ngưng (§4.4). */}
+          {ACTIVE_HOURS_ENABLED ? (
+          <Card size="sm">
+            <CardContent className="space-y-4">
+              <SwitchRow
+                checked={activeHours.enabled}
+                onCheckedChange={(v) => setActiveHours({ enabled: v })}
+                label="Chỉ trực trong giờ hoạt động"
+                hint="Ngoài khung giờ đã đặt, agent tự Tạm ngưng trả lời khách"
+              />
+              {activeHours.enabled ? (
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-1.5 text-muted-foreground">
+                    <Clock className="size-3.5" aria-hidden />
+                    <SubHead>Khung giờ trực</SubHead>
+                  </div>
+                  {WEEKDAYS.map(({ key, label }) => {
+                    const day = activeHours.weekly[key];
+                    return (
+                      <div key={key} className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg px-3 py-2 ring-1 ring-foreground/10">
+                        <span className="w-20 shrink-0 text-sm font-medium">{label}</span>
+                        <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Switch checked={!day.closed} onCheckedChange={(v) => setActiveDay(key, { closed: !v })} />
+                          {day.closed ? "Nghỉ" : "Trực"}
+                        </label>
+                        <div className={cn("ml-auto flex items-center gap-2", day.closed && "pointer-events-none opacity-40")}>
+                          <Input
+                            type="time"
+                            className="w-28"
+                            value={day.open}
+                            disabled={day.closed}
+                            aria-label={`Bắt đầu trực ${label}`}
+                            onChange={(e) => setActiveDay(key, { open: e.target.value })}
+                          />
+                          <span className="text-muted-foreground">–</span>
+                          <Input
+                            type="time"
+                            className="w-28"
+                            value={day.close}
+                            disabled={day.closed}
+                            aria-label={`Ngưng trực ${label}`}
+                            onChange={(e) => setActiveDay(key, { close: e.target.value })}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : null}
+            </CardContent>
+          </Card>
+          ) : null}
+
           {/* Hồ sơ định nghĩa agent — CRUD + tải về: xem/sửa/xoá mỗi file, thêm file mới (§4.4 item surface). */}
           <Card size="sm">
             <CardContent className="space-y-2">
               <div className="flex items-start justify-between gap-3">
                 <div className="space-y-0.5">
                   <SubHead>Hồ sơ định nghĩa agent</SubHead>
-                  <p className="text-xs text-muted-foreground">
+                  {/* <p className="text-xs text-muted-foreground">
                     Các file định hình cách agent trả lời — tải lên, sửa hoặc tải xuống.
-                  </p>
+                  </p> */}
                 </div>
                 <div className="flex shrink-0 flex-wrap justify-end gap-1.5">
                   <Button variant="outline" size="xs" onClick={downloadAll} disabled={files.length === 0}>
@@ -455,10 +495,11 @@ export function AgentConfigScreen({ initialTab }: { initialTab?: string }) {
                     <Upload className="size-3.5" aria-hidden />
                     Tải lên
                   </Button>
-                  <Button size="xs" onClick={trainAgent}>
+                  {/* Nút "Train with Manager" tạm ẩn — bỏ comment để hiện lại. */}
+                  {/* <Button size="xs" onClick={trainAgent}>
                     <GraduationCap className="size-3.5" aria-hidden />
                     Train with Manager
-                  </Button>
+                  </Button> */}
                   <input
                     ref={fileImport}
                     type="file"
@@ -581,44 +622,28 @@ export function AgentConfigScreen({ initialTab }: { initialTab?: string }) {
 
         {/* M6.6 — Thông báo & kênh báo chủ shop */}
         <TabsContent value="notify" className="space-y-5">
-          <GroupHeader context="Nhận tin báo khi agent bàn giao hoặc có việc cần duyệt.">
-            {notifyChannelsOn > 0 ? (
-              <>
-                Báo qua <span className="text-foreground">{notifyChannelsOn} kênh</span> ·{" "}
-                <span className="text-foreground">{config.notifyChannels.events.length} loại tin báo</span>.
-              </>
-            ) : (
-              <span className="text-amber-600">Chưa bật kênh nào — bạn sẽ không nhận được tin báo.</span>
-            )}
+          <GroupHeader context="Nhận thông báo khi agent bàn giao.">
+            Kênh nhận thông báo
           </GroupHeader>
 
           <Card size="sm">
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <SubHead>Kênh nhận tin báo</SubHead>
-                <SwitchRow
-                  checked={config.notifyChannels.telegram}
-                  onCheckedChange={(v) => setConfig({ notifyChannels: { ...config.notifyChannels, telegram: v } })}
-                  label={
-                    <span className="flex items-center gap-2">
-                      <Send className="size-4 text-sky-500" aria-hidden />
-                      Telegram
-                    </span>
-                  }
+                <NotifyChannelRow
+                  channel="telegram"
+                  connected={config.notifyChannels.telegram}
+                  onConnect={() => setNotifyDialog("telegram")}
+                  onDisconnect={() => disconnectNotify("telegram")}
                 />
-                <SwitchRow
-                  checked={config.notifyChannels.zalo}
-                  onCheckedChange={(v) => setConfig({ notifyChannels: { ...config.notifyChannels, zalo: v } })}
-                  label={
-                    <span className="flex items-center gap-2">
-                      <ZaloIcon className="size-4" />
-                      Zalo
-                    </span>
-                  }
+                <NotifyChannelRow
+                  channel="zalo"
+                  connected={config.notifyChannels.zalo}
+                  onConnect={() => setNotifyDialog("zalo")}
+                  onDisconnect={() => disconnectNotify("zalo")}
                 />
               </div>
               <div className="space-y-2">
-                <SubHead>Báo khi nào</SubHead>
+                <SubHead>Thông báo khi nào</SubHead>
                 {NOTIFY_EVENTS.map((ev) => {
                   const on = config.notifyChannels.events.includes(ev.key);
                   // Dòng bàn giao phản chiếu số tình huống đang bật + link sang tab Bàn giao (đối xứng link ngược lại).
@@ -662,6 +687,20 @@ export function AgentConfigScreen({ initialTab }: { initialTab?: string }) {
         </TabsContent>
       </Tabs>
 
+      {/* Modal kết nối kênh thông báo (Telegram/Zalo) — định danh người nhận + kiểm tra kết nối. */}
+      <NotifyChannelDialog
+        channel={notifyDialog}
+        initialValue={
+          notifyDialog === "telegram"
+            ? config.notifyChannels.telegramToken
+            : notifyDialog === "zalo"
+              ? config.notifyChannels.zaloToken
+              : undefined
+        }
+        onClose={() => setNotifyDialog(null)}
+        onConnect={connectNotify}
+      />
+
       {/* Xem nội dung file định nghĩa — đóng để quay lại (§6.6/§9 escape-route). */}
       <Dialog open={!!preview} onOpenChange={(o) => !o && setPreview(null)}>
         <DialogContent className="sm:max-w-lg">
@@ -680,7 +719,7 @@ export function AgentConfigScreen({ initialTab }: { initialTab?: string }) {
 
       {/* Sửa file — keyed theo file để reset draft mỗi lần mở (§8 forms). */}
       <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
-        <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-lg">
+        <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-xl">
           {editing ? (
             <FileEditorForm
               key={editing.key}
@@ -734,6 +773,15 @@ function triggerDownload(filename: string, content: string) {
   URL.revokeObjectURL(url);
 }
 
+// Ngày học cho Daily learn: "Thứ Tư, 11/06/2026". Dùng UTC để tất định, không lệ thuộc múi giờ/locale runtime.
+const WEEKDAYS_VI = ["Chủ nhật", "Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy"];
+function formatDay(iso: string) {
+  const [y, m, d] = iso.split("-").map(Number);
+  const wd = WEEKDAYS_VI[new Date(Date.UTC(y, m - 1, d)).getUTCDay()];
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${wd}, ${pad(d)}/${pad(m)}/${y}`;
+}
+
 // Thời gian đào tạo gần nhất, gọn cho lede: "09:24 · 10/06/2026" (tất định, không phụ thuộc locale).
 function formatTrainedAt(iso: string) {
   const [date, time] = iso.split("T");
@@ -756,43 +804,32 @@ function slugify(s: string) {
 
 // Form sửa file định nghĩa — giữ draft cục bộ, tự bù đuôi .md, chặn lưu khi thiếu tiêu đề/tên file.
 function FileEditorForm({ initial, onSave }: { initial: AgentFile; onSave: (f: AgentFile) => void }) {
-  const [draft, setDraft] = useState<AgentFile>(initial);
-  const set = (patch: Partial<AgentFile>) => setDraft((d) => ({ ...d, ...patch }));
-  const valid = draft.title.trim() !== "" && draft.file.trim() !== "";
+  // Chỉ sửa nội dung — tiêu đề/tên file/mô tả giữ nguyên, hiện read-only ở header để biết đang sửa file nào.
+  const [content, setContent] = useState(initial.content);
+  const valid = content.trim() !== "";
   const submit = () => {
     if (!valid) return;
-    const raw = draft.file.trim();
-    const file = raw.toLowerCase().endsWith(".md") ? raw : `${raw}.md`;
-    onSave({ ...draft, title: draft.title.trim(), file, description: draft.description.trim() });
+    onSave({ ...initial, content });
   };
   return (
     <>
       <DialogHeader>
-        <DialogTitle>Sửa file định nghĩa</DialogTitle>
-        <DialogDescription>Mô tả một mặt của agent — tính cách, kỹ năng, nguyên tắc…</DialogDescription>
+        <DialogTitle className="flex flex-wrap items-center gap-2">
+          {initial.title}
+          <code className="rounded bg-muted px-1.5 py-0.5 text-[11px] font-normal text-muted-foreground">{initial.file}</code>
+        </DialogTitle>
+        <DialogDescription>{initial.description || "Sửa nội dung định nghĩa cho agent."}</DialogDescription>
       </DialogHeader>
-      <div className="space-y-3">
-        <div className="grid items-end gap-3 sm:grid-cols-2">
-          <Field label="Tiêu đề">
-            <Input value={draft.title} onChange={(e) => set({ title: e.target.value })} placeholder="vd: Tính cách cốt lõi" />
-          </Field>
-          <Field label="Tên file">
-            <Input value={draft.file} onChange={(e) => set({ file: e.target.value })} placeholder="vd: SOUL.md (tự thêm .md)" />
-          </Field>
-        </div>
-        <Field label="Mô tả">
-          <Input value={draft.description} onChange={(e) => set({ description: e.target.value })} placeholder="Một câu file này nói về gì" />
-        </Field>
-        <Field label="Nội dung">
-          <Textarea
-            rows={10}
-            value={draft.content}
-            onChange={(e) => set({ content: e.target.value })}
-            className="font-mono text-xs"
-            placeholder={"# Tiêu đề\n\nNội dung định nghĩa…"}
-          />
-        </Field>
-      </div>
+      <Field label="Nội dung">
+        <Textarea
+          autoFocus
+          rows={16}
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+          className="font-mono text-xs"
+          placeholder={"# Tiêu đề\n\nNội dung định nghĩa…"}
+        />
+      </Field>
       <DialogFooter>
         <DialogClose render={<Button variant="outline" />}>Huỷ</DialogClose>
         <Button onClick={submit} disabled={!valid}>
@@ -886,18 +923,52 @@ function EmptyState({
   );
 }
 
+// Tóm tắt một ngày học (Daily learn) — read-only: tiêu đề ngày + headline, rồi danh sách điều học được
+// kèm chip nguồn (bàn giao / chủ shop tư vấn / tình huống đặc biệt). Chỉ để xem, không có duyệt/bỏ.
+function DailyLearnCard({ day }: { day: LearnDay }) {
+  return (
+    <Card size="sm">
+      <CardContent className="space-y-3">
+        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+          <h3 className="text-sm font-semibold tabular-nums">{formatDay(day.date)}</h3>
+          {/* <Badge variant="secondary" className="tabular-nums">{day.cases.length} điều</Badge> */}
+          <span className="w-full text-xs text-muted-foreground sm:w-auto sm:flex-1">{day.summary}</span>
+        </div>
+        <ul className="space-y-1.5">
+          {day.cases.map((c) => {
+            const meta = LEARN_CASE_META[c.type];
+            const CaseIcon = meta.icon;
+            return (
+              <li key={c.id} className="rounded-lg px-3 py-2.5 ring-1 ring-foreground/10">
+                <Badge variant="outline" className={cn("gap-1", meta.className)}>
+                  <CaseIcon className="size-3" aria-hidden />
+                  {meta.label}
+                </Badge>
+                <p className="mt-1.5 text-sm">{c.insight}</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">{c.from}</p>
+              </li>
+            );
+          })}
+        </ul>
+      </CardContent>
+    </Card>
+  );
+}
+
 // Một tình huống bàn giao: header (switch + mô tả + ngưỡng) và phần ví dụ câu khách nói bung ra để sửa.
 function HandoffRuleRow({
   rule,
   onToggle,
   onThreshold,
   onPhrasesChange,
+  onSuggest,
   onRemove,
 }: {
   rule: HandoffRule;
   onToggle: (v: boolean) => void;
   onThreshold: (n: number) => void;
   onPhrasesChange: (phrases: string[]) => void;
+  onSuggest: () => void;
   onRemove: () => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -927,15 +998,28 @@ function HandoffRuleRow({
         ) : null}
       </div>
       <div className="px-3 pb-2.5">
-        <button
-          type="button"
-          onClick={() => setOpen((v) => !v)}
-          className="inline-flex cursor-pointer items-center gap-1 rounded text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-          aria-expanded={open}
-        >
-          <ChevronRight className={cn("size-3.5 transition-transform", open && "rotate-90")} aria-hidden />
-          Ví dụ khách nói ({rule.triggerPhrases.length})
-        </button>
+        <div className="flex items-center justify-between gap-2">
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            className="inline-flex cursor-pointer items-center gap-1 rounded text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+            aria-expanded={open}
+          >
+            <ChevronRight className={cn("size-3.5 transition-transform", open && "rotate-90")} aria-hidden />
+            Ví dụ khách nói ({rule.triggerPhrases.length})
+          </button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="xs"
+            onClick={onSuggest}
+            className="text-muted-foreground hover:text-foreground"
+            title="Nhờ agent gợi ý ví dụ câu khách nói cho tình huống này"
+          >
+            <Sparkles className="size-3.5" aria-hidden />
+            Gợi ý
+          </Button>
+        </div>
         {open ? <PhraseEditor phrases={rule.triggerPhrases} onChange={onPhrasesChange} /> : null}
       </div>
     </div>
@@ -999,19 +1083,19 @@ function AddHandoffDialog({
   onOpenChange,
   existingKeys,
   onAdd,
+  onSuggest,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   existingKeys: string[];
   onAdd: (rule: HandoffRule) => void;
+  onSuggest: (label: string, description: string) => void;
 }) {
   const [label, setLabel] = useState("");
   const [description, setDescription] = useState("");
-  const [category, setCategory] = useState<HandoffCategory>("risk");
   const reset = () => {
     setLabel("");
     setDescription("");
-    setCategory("risk");
   };
   const submit = () => {
     const name = label.trim();
@@ -1020,12 +1104,17 @@ function AddHandoffDialog({
       key: makeHandoffKey(name, existingKeys),
       label: name,
       description: description.trim() || "Tình huống do bạn thêm.",
-      category,
       triggerPhrases: [],
       enabled: true,
       custom: true,
     });
     reset();
+    onOpenChange(false);
+  };
+  // Nhờ agent gợi ý ví dụ khách nói: đóng dialog rồi mở panel chat (để dùng được), prompt bám tên/mô tả đang gõ.
+  const suggest = () => {
+    if (!label.trim() && !description.trim()) return;
+    onSuggest(label, description);
     onOpenChange(false);
   };
   return (
@@ -1039,30 +1128,34 @@ function AddHandoffDialog({
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Thêm tình huống bàn giao</DialogTitle>
-          <DialogDescription>Mô tả lúc agent nên dừng và nhường bạn xử lý. Bạn thêm câu mẫu sau khi tạo.</DialogDescription>
+          <DialogDescription>Mô tả lúc nào agent nên bàn giao cho bạn</DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
           <Field label="Tên tình huống">
             <Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="VD: Khách hỏi bảo hành" />
           </Field>
-          <Field label="Khi nào agent dừng" hint="Một câu ngắn, dễ hiểu cho chính bạn về sau.">
+          <Field label="Khi nào agent nên bàn giao cho bạn" hint="Mô tả tình huống hoặc keywords cần bàn giao">
             <Textarea
               rows={2}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="VD: Khách hỏi về điều kiện và thời hạn bảo hành."
+              placeholder="VD: Anh muốn bảo hành, chị muốn đổi sản phẩm, ..."
             />
-          </Field>
-          <Field label="Nhóm">
-            <div className="grid gap-2 sm:grid-cols-3">
-              {HANDOFF_CATEGORIES.map((c) => (
-                <ModeCard key={c.key} active={category === c.key} title={c.label} desc={c.hint} onClick={() => setCategory(c.key)} />
-              ))}
-            </div>
           </Field>
         </div>
         <DialogFooter>
           <DialogClose render={<Button variant="outline" />}>Huỷ</DialogClose>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={suggest}
+            disabled={!label.trim() && !description.trim()}
+            className="text-muted-foreground hover:text-foreground"
+            title="Nhờ agent gợi ý ví dụ câu khách nói cho tình huống này"
+          >
+            <Sparkles className="size-4" aria-hidden />
+            Gợi ý
+          </Button>
           <Button onClick={submit} disabled={!label.trim()}>
             Thêm tình huống
           </Button>

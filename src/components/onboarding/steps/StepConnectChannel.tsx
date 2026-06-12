@@ -74,8 +74,7 @@ export function StepConnectChannel({ draft, update }: StepProps) {
   return (
     <div className="space-y-3">
       <p className="text-sm text-muted-foreground">
-        Kết nối Facebook Page hoặc Zalo OA để agent nhận và trả lời tin nhắn của khách. Nối kênh nào
-        cũng được, có thể nối cả hai.
+        Kết nối kênh để agent nhận và trả lời tin nhắn của khách.
       </p>
 
       <ChannelCard

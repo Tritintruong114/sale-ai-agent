@@ -9,6 +9,7 @@ import {
   ChevronUp,
   ClipboardPaste,
   Download,
+  ExternalLink,
   FileText,
   Link2,
   Loader2,
@@ -38,6 +39,16 @@ const METHODS: { key: MethodKey; label: string; icon: LucideIcon; accept?: strin
   },
   { key: "url", label: "Link", icon: Link2 },
   { key: "paste", label: "Dán nội dung", icon: ClipboardPaste },
+];
+
+// Link mẫu để bấm thử nhanh (web bán hàng, Google Sheets, Facebook Page).
+const EXAMPLE_LINKS: { label: string; url: string }[] = [
+  { label: "Web bán hàng", url: "https://shopee.vn/lg_official_store" },
+  {
+    label: "Google Sheets",
+    url: "https://docs.google.com/spreadsheets/d/1n8VhPVzeL5gWEPxVRa2QvqKLuERGKt4kXrIFpOYXxuA/edit?gid=0#gid=0",
+  },
+  { label: "Facebook Page", url: "https://www.facebook.com/profile.php?id=61573582498740" },
 ];
 
 // File mẫu cho các nguồn tải tệp (prototype tạo tại chỗ).
@@ -189,9 +200,7 @@ export function StepProducts({ draft, update }: StepProps) {
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">
-        Chọn một nguồn — agent tự đọc và gom thành sản phẩm để bạn duyệt.
-      </p>
+      
 
       {/* Chọn nguồn nạp */}
       <div className="flex flex-wrap gap-2">
@@ -221,7 +230,7 @@ export function StepProducts({ draft, update }: StepProps) {
       {method === "url" ? (
         <div className="space-y-2">
           <label htmlFor="scan-url" className="text-sm font-medium">
-            Link trang / bài đăng / album
+            Dán link web bán hàng, Google Sheets hoặc Facebook Page
           </label>
           <div className="flex items-center gap-2">
             <Input
@@ -234,18 +243,30 @@ export function StepProducts({ draft, update }: StepProps) {
                   addLink();
                 }
               }}
-              placeholder="vd: facebook.com/trang-cua-ban hoặc link Google Sheets"
+              placeholder="vd: shopee.vn/lg_official_store"
               disabled={scanning}
-              aria-describedby="scan-url-hint"
             />
             <Button variant="outline" size="lg" onClick={addLink} disabled={scanning || !url.trim()}>
               <Plus className="size-4" aria-hidden />
               Thêm link
             </Button>
           </div>
-          <p id="scan-url-hint" className="text-xs text-muted-foreground">
-            Thêm nhiều link — trang, bài đăng, web bán hàng, Google Sheets…
-          </p>
+
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-xs text-muted-foreground">Ví dụ:</span>
+            {EXAMPLE_LINKS.map((ex) => (
+              <a
+                key={ex.url}
+                href={ex.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+              >
+                {ex.label}
+                <ExternalLink className="size-3 text-muted-foreground" aria-hidden />
+              </a>
+            ))}
+          </div>
 
           {links.length > 0 && (
             <ul className="space-y-1.5">
@@ -339,7 +360,7 @@ export function StepProducts({ draft, update }: StepProps) {
                 className="flex shrink-0 items-center gap-1.5 underline-offset-2 hover:text-foreground hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
               >
                 <Download className="size-3.5" aria-hidden />
-                Tải file mẫu
+                Tải tệp mẫu
               </button>
             )}
           </div>
@@ -350,14 +371,14 @@ export function StepProducts({ draft, update }: StepProps) {
 
       {scanned && !scanning && (
         <>
-          {/* Trạng thái map nguồn: tổng đã map + số item còn thiếu thông tin. */}
+          {/* Trạng thái đọc nguồn: tổng đã tổng hợp + số item còn thiếu thông tin. */}
           <div
             className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl border bg-muted/30 px-4 py-3 text-sm"
             role="status"
           >
             <span className="flex items-center gap-1.5 font-medium">
               <CheckCircle2 className="size-4 text-emerald-600" aria-hidden />
-              Đã map {SAMPLE_SUGGESTED_PRODUCTS.length} sản phẩm
+              Đã tổng hợp {SAMPLE_SUGGESTED_PRODUCTS.length} sản phẩm
             </span>
             {incompleteCount > 0 && (
               <span className="flex items-center gap-1.5 text-amber-700">
@@ -398,7 +419,7 @@ export function StepProducts({ draft, update }: StepProps) {
             )}
           </div>
           <p className="text-xs text-muted-foreground">
-            Đang chọn {draft.products.length} sản phẩm — bỏ tick mục không muốn bán.
+            Đang chọn {draft.products.length} sản phẩm
           </p>
         </>
       )}

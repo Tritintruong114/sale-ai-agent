@@ -14,6 +14,11 @@ type SetupState = {
   // Chủ shop chủ động ẩn checklist.
   dismissed: boolean;
   dismiss: () => void;
+  // Welcome sau Onboarding: bật cờ để hiện modal chào mừng (2 lựa chọn xem/bỏ qua hướng dẫn).
+  // Không tự chạy tour nữa — để người dùng tự chọn (không force).
+  welcomePending: boolean;
+  showWelcome: () => void;
+  dismissWelcome: () => void;
   // Bắt đầu lại từ đầu (sau Onboarding / chạy lại Onboarding).
   reset: () => void;
 };
@@ -29,7 +34,10 @@ export const useSetupStore = create<SetupState>()(
       markAgentTested: () => set({ agentTested: true }),
       dismissed: false,
       dismiss: () => set({ dismissed: true }),
-      reset: () => set({ gateways: { ...INITIAL_GATEWAYS }, agentTested: false, dismissed: false }),
+      welcomePending: false,
+      showWelcome: () => set({ welcomePending: true }),
+      dismissWelcome: () => set({ welcomePending: false }),
+      reset: () => set({ gateways: { ...INITIAL_GATEWAYS }, agentTested: false, dismissed: false, welcomePending: false }),
     }),
     { name: "fanpage-setup-state", storage: createJSONStorage(() => localStorage) },
   ),

@@ -4,35 +4,49 @@ import {
   Inbox,
   LayoutDashboard,
   Package,
-  Radio,
   ShoppingCart,
   Store,
+  Wallet,
   type LucideIcon,
 } from "lucide-react";
 import { PENDING_COUNTS } from "@/data/counts";
 
 export type NavItem = {
   href: string;
-  label: string; // nhãn tiếng Việt đầy đủ — dùng cho drawer mobile
-  short: string; // nhãn tiếng Anh 1 từ — dùng cho top-bar
-  code: string; // mã màn theo roadmap (M1–M6)
+  label: string; // nhãn tiếng Việt đầy đủ
   icon: LucideIcon;
   badge?: number;
   tour?: string; // id bước tour (data-tour-step-id) để overlay highlight mục nav này
 };
 
-// 6 màn V0 theo roadmap. Dashboard là tab mặc định.
-export const PRIMARY_NAV: NavItem[] = [
-  { href: "/dashboard", label: "Dashboard", short: "Dashboard", code: "M4", icon: LayoutDashboard, tour: "nav-dashboard" },
-  { href: "/inbox", label: "Inbox hội thoại", short: "Inbox", code: "M1", icon: Inbox, badge: PENDING_COUNTS.handoff, tour: "nav-inbox" },
-  { href: "/orders", label: "Quản lý đơn", short: "Orders", code: "M2", icon: ShoppingCart, badge: PENDING_COUNTS.bigOrders, tour: "nav-orders" },
-  { href: "/products", label: "Sản phẩm", short: "Products", code: "M3", icon: Package, tour: "nav-products" },
-  { href: "/payments", label: "Thanh toán", short: "Payments", code: "M5", icon: CreditCard, badge: PENDING_COUNTS.payments, tour: "nav-payments" },
-  { href: "/shop-info", label: "Thông tin shop", short: "Shop", code: "—", icon: Store, tour: "nav-shop" },
-  { href: "/agent-config", label: "Cấu hình Agent", short: "Agent", code: "M6", icon: Bot, tour: "nav-agent" },
+export type NavGroup = {
+  label: string; // tiêu đề category trên SideNav
+  items: NavItem[];
+};
+
+// Điều hướng gom theo category — §2 design.md.
+// "Quản lý": việc vận hành hằng ngày. "Cài đặt": cấu hình shop & agent (ngoài luồng demo chính).
+// Kênh kết nối đã gộp vào "Thông tin shop" (mục Kênh kết nối) nên không còn mục nav riêng.
+export const NAV_GROUPS: NavGroup[] = [
+  {
+    label: "Quản lý",
+    items: [
+      { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, tour: "nav-dashboard" },
+      { href: "/inbox", label: "Inbox hội thoại", icon: Inbox, badge: PENDING_COUNTS.handoff, tour: "nav-inbox" },
+      { href: "/orders", label: "Quản lý đơn", icon: ShoppingCart, badge: PENDING_COUNTS.bigOrders, tour: "nav-orders" },
+      { href: "/products", label: "Sản phẩm", icon: Package, tour: "nav-products" },
+      { href: "/payments", label: "Giao dịch", icon: CreditCard, badge: PENDING_COUNTS.payments, tour: "nav-payments" },
+    ],
+  },
+  {
+    label: "Cài đặt",
+    items: [
+      { href: "/shop-info", label: "Thông tin shop", icon: Store, tour: "nav-shop" },
+      { href: "/agent-config", label: "Cấu hình Agent", icon: Bot, tour: "nav-agent" },
+      { href: "/payment-gateway", label: "Cổng thanh toán", icon: Wallet },
+    ],
+  },
 ];
 
-// Nhóm "Cài đặt" — ngoài luồng demo chính, không xoá.
-export const SETTINGS_NAV: NavItem[] = [
-  { href: "/settings/channels", label: "Kênh", short: "Channels", code: "—", icon: Radio },
-];
+// Danh sách phẳng mọi mục nav — TopBar dùng để suy tiêu đề màn từ route.
+export const NAV_ITEMS: NavItem[] = NAV_GROUPS.flatMap((g) => g.items);

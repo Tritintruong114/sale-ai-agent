@@ -1,35 +1,79 @@
 {
-  "_note": "M6.1 Học hằng ngày (G2). enabled/runAt/sources khớp config.dailyLearning (config.ts) — đây là mock nhật ký + Manager update, KHÔNG phải nguồn sự thật config. journal = nhật ký điều agent học được, duyệt trước khi áp (HITL). 2 mục pending khớp dashboard.learnedToday=2.",
+  "_note": "M6.1 Học hằng ngày (G2). enabled/runAt/sources khớp config.dailyLearning (config.ts) — đây là mock nhật ký, KHÔNG phải nguồn sự thật config. dailyLearn = tóm tắt mỗi ngày agent học được gì + học từ đâu. Read-only, chỉ để xem — không có duyệt/bỏ. 3 nguồn: handoff (hội thoại bạn đã tiếp nhận), owner (bạn tự trả lời khách trong hội thoại), special (tình huống đặc biệt). KHÔNG có tính năng sửa câu trả lời mẫu — 'from' phải bám hành động thật. sources giữ cho dữ liệu nhưng danh sách 'Agent học từ đâu' đang ẩn ở UI.",
   "enabled": true,
   "runAt": "22:00",
   "sources": [
     { "key": "closed_today", "label": "Hội thoại đã chốt hôm nay", "enabled": true, "count": 12 },
-    { "key": "owner_edits", "label": "Lần chủ shop sửa câu trả lời", "enabled": true, "count": 3 },
-    { "key": "handoff_done", "label": "Case hand-off đã xử lý", "enabled": true, "count": 5 },
+    { "key": "owner_edits", "label": "Câu trả lời bạn đã sửa", "enabled": true, "count": 3 },
+    { "key": "handoff_done", "label": "Hội thoại đã bàn giao", "enabled": true, "count": 5 },
     { "key": "new_products", "label": "Sản phẩm mới thêm", "enabled": false, "count": 2 }
   ],
-  "journal": [
+  "dailyLearn": [
     {
-      "id": "lj-001",
-      "insight": "Khách đặt mâm cúng dịp đặc biệt → hỏi rõ ngày cúng để kịp đặt trước 1–2 ngày.",
-      "source": "handoff_done",
-      "status": "pending"
+      "id": "dl-2026-06-11",
+      "date": "2026-06-11",
+      "cases": [
+        {
+          "id": "c-0611-1",
+          "type": "handoff",
+          "insight": "Khách mua giỏ quà biếu thường hỏi thêm thiệp và cách gói.",
+          "from": "Hội thoại chị Ngọc Hân — giỏ quà 800k biếu sếp."
+        },
+        {
+          "id": "c-0611-2",
+          "type": "special",
+          "insight": "Sầu riêng gửi đi tỉnh: nhắc khách nhận trong ngày để không chín gắt.",
+          "from": "Đơn gửi xe khách đi Đắk Lắk."
+        }
+      ]
     },
     {
-      "id": "lj-002",
-      "insight": "Giỏ quà trái cây hay bị hỏi giá → thêm giá vào câu chào để rút ngắn hội thoại.",
-      "source": "closed_today",
-      "status": "pending"
+      "id": "dl-2026-06-10",
+      "date": "2026-06-10",
+      "cases": [
+        {
+          "id": "c-0610-1",
+          "type": "owner",
+          "insight": "Báo giá giỏ quà ngay từ câu chào để khách khỏi hỏi lại.",
+          "from": "Khách hỏi giá giỏ quà — bạn tự trả lời."
+        },
+        {
+          "id": "c-0610-2",
+          "type": "handoff",
+          "insight": "Đơn mâm ngũ quả nên hỏi rõ ngày cúng để soạn kịp.",
+          "from": "Hội thoại đặt mâm cúng rằm tháng."
+        }
+      ]
     },
     {
-      "id": "lj-003",
-      "insight": "Sầu riêng được hỏi nhiều về độ chín → bổ sung ý 'cơm vàng, hạt lép' vào mô tả.",
-      "source": "owner_edits",
-      "status": "approved"
+      "id": "dl-2026-06-09",
+      "date": "2026-06-09",
+      "cases": [
+        {
+          "id": "c-0609-1",
+          "type": "owner",
+          "insight": "Khách hay hỏi độ chín sầu riêng — trả lời rõ 'cơm vàng, hạt lép'.",
+          "from": "Hội thoại bạn tư vấn khách chọn sầu riêng Ri6."
+        },
+        {
+          "id": "c-0609-2",
+          "type": "special",
+          "insight": "Trái cây bị dập khi giao: hướng khách chụp ảnh trong 24h để đổi.",
+          "from": "Khiếu nại giỏ quà bị dập lúc giao."
+        }
+      ]
+    },
+    {
+      "id": "dl-2026-06-08",
+      "date": "2026-06-08",
+      "cases": [
+        {
+          "id": "c-0608-1",
+          "type": "handoff",
+          "insight": "Khách lấy trên 10 giỏ thường xin giá sỉ — báo sẵn mức chiết khấu.",
+          "from": "Hội thoại công ty đặt 15 giỏ quà."
+        }
+      ]
     }
-  ],
-  "managerUpdates": {
-    "templatesUpdated": 4,
-    "summary": "Agent đã cập nhật 4 mẫu trả lời cho phù hợp hơn."
-  }
+  ]
 }

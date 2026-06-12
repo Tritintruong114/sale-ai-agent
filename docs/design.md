@@ -1,4 +1,4 @@
-# Design System — Fanpage AI Agent
+# Design System — Sale AI Agent
 
 Tài liệu thiết kế **chung cho toàn app**: tokens, typography, component, hệ màu, pattern bố cục và quy ước dùng lại trên mọi màn (Dashboard, Inbox, Đơn, Sản phẩm, Thanh toán, Cấu hình Agent, Onboarding).
 
@@ -215,6 +215,8 @@ Khi nhiều bộ lọc cùng hàng ở cột hẹp (vd danh sách Inbox), dùng 
 | system | chip giữa `bg-amber-100 text-amber-800` |
 | typing | 3 chấm `animate-bounce` |
 
+**Composer** ([Composer.tsx](../src/components/shared/chat/Composer.tsx)) — khung card bo `rounded-2xl border`, `focus-within:ring`: ô `textarea` tự giãn cao (`min-h-[52px]`, max `160px` rồi cuộn), Enter gửi · Shift+Enter xuống dòng; thanh công cụ dưới: nút gửi tròn (`ArrowUp`) bên phải, các control opt-in bên trái. Tính năng "khung chat thật" bật rời qua prop `composer` của `ChatWindow` (`ComposerOptions`): `enableAttachments` (đính kèm tệp — chip UI, prototype không gửi API), `models`/`modelId`/`onModelChange` (chọn model), `enableVoice` (nhập giọng nói qua Web Speech API — tự ẩn nếu trình duyệt không hỗ trợ). Side panel "Talk to Agent" bật cả ba; Inbox/onboarding để mặc định gọn (chỉ textarea + gửi).
+
 ### 6.11 Phân đoạn màn trên TopBar (SegmentView)
 Khi một màn có **2–3 góc nhìn ngang hàng** trên cùng tập dữ liệu, tách bằng **segmented tabs đặt trên TopBar** ([TopBar.tsx](../src/components/shell/TopBar.tsx)) thay vì nhồi control vào thân trang. Các màn đang dùng:
 
@@ -224,6 +226,7 @@ Khi một màn có **2–3 góc nhìn ngang hàng** trên cùng tập dữ liệ
 | Sản phẩm | **Tổng quan** (đọc) · **Sản phẩm** (thao tác/bảng) | `productsTab` |
 | Thanh toán | **Chỉ số** (đọc — phễu KPI) · **Thu tiền** (thao tác — duyệt HITL + thu) | `paymentsTab` |
 | Cấu hình Agent | 5 nhóm (Học hằng ngày · Bàn giao · Danh tính · Khoá AI · Thông báo) | `agentConfigTab` |
+| Thông tin shop | **Thông tin shop** (hồ sơ nghiệp vụ) · **Kênh kết nối** (FB/Zalo) | `shopTab` |
 
 Quy ước chung:
 
@@ -258,12 +261,12 @@ Danh sách nhiều bản ghi cần quét/so sánh nhanh dùng `<table>` thật (
 - **Khởi động**: cờ `pendingTourId` ở `useUiStore` (đặt từ Onboarding "Vào Dashboard" hoặc nút "Xem hướng dẫn" cuối SideNav) → `TourLauncher` trong AppTour gọi `start()`.
 - **Nội dung**: nhãn tiếng Việt (Tiếp / Quay lại / Xong, "Bước X / Y"); mỗi màn một câu **giá trị người dùng** + bộ tên thực thể chuẩn (copy-writer convention), không gọi agent là "nó".
 
-### 6.14 Setup checklist (mini-panel "Thiết lập") — [SetupChecklist](../src/components/shell/SetupChecklist.tsx)
-3 việc khởi đầu để shop chạy được sau Onboarding, đặt cuối SideNav (ẩn khi `collapsed`). Áp **§1.6 premium-minimal**:
-- **Khối gọn**: `rounded-lg ring-1 ring-foreground/10 px-2 py-1.5`; hàng đầu gộp nhãn "THIẾT LẬP" + **thanh tiến trình mảnh** (`h-1`, fill bằng `transform: scaleX(done/total)` — không animate width, không reflow) + `x/total` + nút ẩn.
-- **Mỗi bước một hàng**: chấm `size-1.5` (chưa xong) / `Check` emerald (xong); **bước kế tiếp** chỉ đậm chữ + chấm primary + `ChevronRight` mờ; hint đẩy sang `title` (tooltip) — không thẻ nổi, không nền tint to. Phân cấp: việc cần làm nổi, việc xong mờ, việc sau trung tính.
-- **Trạng thái "xong" suy từ state thật**, không cờ giả: có sản phẩm (`products.json.catalog`), đã nối cổng (`useSetupStore.gateways`), đã chat thử (`useSetupStore.agentTested` — set khi mở chat ở `useUiStore.setAgentChatOpen`).
-- Xong cả 3 → **một hàng ghi nhận** ("Shop đã sẵn sàng bán hàng.") rồi tự ẩn sau 4s. Dismiss + reset (sau Onboarding / "Chạy lại Onboarding") ở `useSetupStore`.
+### 6.14 Setup guide (Dashboard empty state) — [SetupGuide](../src/components/dashboard/SetupGuide.tsx)
+3 việc khởi đầu để shop sẵn sàng bán, **đặt trong Dashboard empty state** (chỉ hiện khi shop chưa có hoạt động — có dữ liệu rồi thì không cần, không nhồi vào SideNav). Áp **§1.6 premium-minimal**:
+- **Welcome trước, guide sau**: xong Onboarding → modal [WelcomeModal](../src/components/shell/WelcomeModal.tsx) góc phải (2 lựa chọn: xem tour §6.13 / tự khám phá, **không force**); vào Dashboard mà chưa có hoạt động thì thấy SetupGuide để tự hoàn tất.
+- **Empty state minimal**: khi `!hasActivity`, [DashboardScreen](../src/components/dashboard/DashboardScreen.tsx) chỉ render **lede + SetupGuide**, bỏ hết block số liệu rỗng (KPI, 3 biểu đồ, hội thoại đáng chú ý, card học) — tránh "dư thừa".
+- **Card guide**: tiêu đề "Hoàn tất thiết lập" + `x/total` + câu "Còn N bước…" + **thanh tiến trình** (`scaleX`, không reflow); mỗi bước một hàng, **bước kế tiếp làm nổi** (nền `primary/5` + ring + số trong vòng primary + `ChevronRight`), bước xong = `CheckCircle2` emerald + chữ mờ.
+- **Trạng thái "xong" suy từ state thật**, không cờ giả: có sản phẩm (`products.json.catalog`), đã nối cổng (`useSetupStore.gateways`), đã chat thử (`useSetupStore.agentTested` — set khi mở chat ở `useUiStore.setAgentChatOpen`). Welcome dùng `useSetupStore.welcomePending`; reset sau Onboarding / "Chạy lại Onboarding".
 
 ---
 

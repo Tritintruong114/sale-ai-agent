@@ -135,7 +135,7 @@ export function tick(prev: InboxFeed): InboxFeed {
       candidate.messages.push({
         id: `${candidate.id}-sys${candidate.messages.length + 1}`,
         role: "system",
-        text: `Cần người: ${h.reason}`,
+        text: `Cần bạn trả lời: ${h.reason}`,
       } as ChatMessage);
       candidate.lastMessageAt = isoAt(next.clock);
     }

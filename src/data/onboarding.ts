@@ -70,25 +70,5 @@ export const TONE_PRESETS = [
 // O5 — nhà cung cấp khoá AI khi chọn dùng khoá riêng (BYOK, G1).
 export const BYOK_PROVIDERS = ["Anthropic (Claude)", "OpenAI", "Google (Gemini)"];
 
-// O6 — kịch bản trả lời mock của agent khi chạy thử (phản chiếu giọng O3 + sản phẩm O2),
-// cài sẵn một nhịp hand-off để khoe điểm nhấn G3.
-export type TestReply =
-  | { kind: "agent"; text: string }
-  | { kind: "handoff"; reason: string };
-
-export function buildTestReplies(opts: {
-  agentName: string;
-  pronoun: string;
-  product?: DraftProduct;
-}): TestReply[] {
-  const { pronoun, product } = opts;
-  const priceLine = product
-    ? `${product.name} hiện có giá ${new Intl.NumberFormat("vi-VN").format(product.price)}đ ạ. ${product.description}`
-    : `Dạ sản phẩm bên mình đang có nhiều mẫu, ${pronoun} tư vấn thêm cho anh/chị nhé ạ?`;
-  return [
-    { kind: "agent", text: `Dạ ${pronoun} chào anh/chị ạ. ${priceLine}` },
-    { kind: "agent", text: `Anh/chị muốn ${pronoun} tư vấn thêm về cách dùng hay đặt luôn ạ?` },
-    // Nhịp hand-off — khách có dấu hiệu chốt đơn → chuyển chủ shop (G3).
-    { kind: "handoff", reason: "Khách muốn mua (dấu hiệu chốt đơn)" },
-  ];
-}
+// O6 — chat thử gọi /api/chat thật (persona "assistant"), không còn kịch bản trả lời mock.
+// Xem src/components/onboarding/TestChatPanel.tsx.

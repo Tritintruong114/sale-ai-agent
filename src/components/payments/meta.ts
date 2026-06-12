@@ -16,6 +16,10 @@ import type { Channel, TimelineEvent } from "@/components/orders/meta";
 // chip = bg-{hue}-100 text-{hue}-700 · dot = bg-{hue}-500 · tint = border-{hue}-500/30 bg-{hue}-500/10.
 // pending=amber (cần duyệt) · sent=orange (đã gửi QR, chờ khách trả) · paid=emerald (đã thu) · rejected=destructive.
 
+// Tạm ẩn tab "Chỉ số" — chỉ hiện "Thanh toán" + "Cài đặt" (giữ code metrics để bật lại sau).
+// Đặt true để khôi phục tab Chỉ số.
+export const PAYMENTS_METRICS_ENABLED = false;
+
 export type PayStatus = "awaiting" | "paid";
 export type Gate = "pending" | "approved" | "rejected";
 

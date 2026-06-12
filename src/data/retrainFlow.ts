@@ -3,10 +3,13 @@
 // cập nhật các file định nghĩa → báo thành công. KHÔNG sửa dữ liệu thật (chỉ hiển thị).
 // Driver ở AgentChatPanel phát từng emission theo thứ tự, gặp câu hỏi thì chờ user trả lời rồi sang lượt sau.
 
+import type { ApplyAction, PaymentCard } from "@/components/shared/chat/types";
+
 export type RetrainEmission =
   | { kind: "reasoning"; text: string; steps?: string[] }
-  | { kind: "agent"; text: string }
-  | { kind: "tool"; label: string; target?: string };
+  | { kind: "agent"; text: string; apply?: ApplyAction } // apply: gắn nút hành động dưới tin agent
+  | { kind: "tool"; label: string; target?: string }
+  | { kind: "payment"; payment: PaymentCard };
 
 export type RetrainTurn = {
   // Các tin bot phát ra tuần tự trong lượt này.

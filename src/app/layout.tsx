@@ -15,7 +15,7 @@ const mono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Fanpage AI Agent",
+  title: "Sale AI Agent",
   description: "Trợ lý bán hàng cho shop trên Facebook / Zalo — Prototype V0",
 };
 

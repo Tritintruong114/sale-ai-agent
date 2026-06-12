@@ -19,8 +19,8 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { DEFAULT_CONFIG } from "@/data/config";
 import { useAgentConfig } from "@/store/agentConfigStore";
-import { useUiStore } from "@/store/uiStore";
 import { useSetupStore } from "@/store/setupStore";
+import { usePrototypeStore } from "@/store/prototypeStore";
 import { Stepper } from "./Stepper";
 import { StepHeader } from "./StepHeader";
 import { ProvisioningScreen } from "./ProvisioningScreen";
@@ -43,25 +43,22 @@ type StepDef = {
   icon: LucideIcon;
   render: (p: StepProps) => React.ReactNode;
   canNext: (d: OnboardingDraft) => boolean;
+  skippable?: boolean; // cho bỏ qua, thêm sau ở Cấu hình
 };
 
 const STEPS: StepDef[] = [
   {
     code: "shop",
-    title: "Tạo shop",
+    title: "Cửa hàng",
     benefit: "Đặt tên shop để agent giới thiệu với khách.",
     icon: Store,
     render: (p) => <StepCreateShop {...p} />,
-    canNext: (d) =>
-      d.shopName.trim().length > 0 &&
-      d.shopType.length > 0 &&
-      (!d.shopType.includes("store") || (d.shopAddress.trim().length > 0 && d.shopPhone.trim().length > 0)),
+    canNext: (d) => d.shopName.trim().length > 0,
   },
   {
     code: "agent",
-    title: "Tạo agent bán hàng",
-    short: "Tạo agent",
-    benefit: "Đặt tên và ảnh đại diện cho trợ lý bán hàng của shop.",
+    title: "Thông tin Agent",
+    benefit: "Đặt tên cho trợ lý bán hàng của shop.",
     icon: Bot,
     render: (p) => <StepCreateAgent {...p} />,
     canNext: (d) => Boolean(d.identity.name && d.identity.tone),
@@ -69,15 +66,15 @@ const STEPS: StepDef[] = [
   {
     code: "products",
     title: "Thêm sản phẩm",
-    benefit: "Tải tệp hoặc dán link — agent tự gom sản phẩm.",
+    benefit: "Tải tệp hoặc dán link — agent tự lập danh sách sản phẩm.",
     icon: PackageSearch,
     render: (p) => <StepProducts {...p} />,
     canNext: (d) => d.products.length >= 1,
+    skippable: true,
   },
   {
     code: "facebook",
     title: "Kết nối kênh",
-    short: "Kết nối",
     benefit: "Nối Facebook hoặc Zalo để agent nhận tin nhắn của khách.",
     icon: Link2,
     render: (p) => <StepConnectChannel {...p} />,
@@ -98,8 +95,16 @@ const INITIAL_DRAFT: OnboardingDraft = {
 
 export function OnboardingWizard() {
   const setConfig = useAgentConfig((s) => s.setConfig);
-  const requestTour = useUiStore((s) => s.requestTour);
   const resetSetup = useSetupStore((s) => s.reset);
+  const showWelcome = useSetupStore((s) => s.showWelcome);
+  const setPrototypeMode = usePrototypeStore((s) => s.setMode);
+
+  // Vào Dashboard sau onboarding: shop vừa tạo nên Dashboard mặc định ở trạng thái chưa có dữ liệu (empty).
+  const finishOnboarding = () => {
+    resetSetup();
+    showWelcome();
+    setPrototypeMode("empty");
+  };
   const [draft, setDraft] = useState<OnboardingDraft>(INITIAL_DRAFT);
   const [index, setIndex] = useState(0);
   const [phase, setPhase] = useState<Phase>("wizard");
@@ -132,15 +137,24 @@ export function OnboardingWizard() {
     setPhase("ready");
   }, [draft, setConfig]);
 
-  const provisioningLines = useMemo(
-    () => [
-      `Creating your shop "${draft.shopName}"`,
-      `Creating your agent "${draft.identity.name}"`,
-      `Importing ${draft.products.length} products`,
-      `Connecting Facebook`,
-    ],
-    [draft.shopName, draft.identity.name, draft.products.length],
-  );
+  const provisioningLines = useMemo(() => {
+    const channels =
+      [draft.channels.fbConnected && "Facebook", draft.channels.zaloConnected && "Zalo"]
+        .filter(Boolean)
+        .join(" và ") || "kênh tin nhắn";
+    return [
+      `Đang tạo shop “${draft.shopName}”`,
+      `Đang tạo agent “${draft.identity.name}”`,
+      draft.products.length > 0 && `Đang thêm ${draft.products.length} sản phẩm`,
+      `Đang kết nối ${channels}`,
+    ].filter(Boolean) as string[];
+  }, [
+    draft.shopName,
+    draft.identity.name,
+    draft.products.length,
+    draft.channels.fbConnected,
+    draft.channels.zaloConnected,
+  ]);
 
   if (phase === "provisioning") {
     return <ProvisioningScreen lines={provisioningLines} onComplete={enable} />;
@@ -156,7 +170,7 @@ export function OnboardingWizard() {
         <CardHeader>
           <div className="flex flex-col items-center gap-2 py-2 text-center">
             <CheckCircle2 className="size-12 text-emerald-500" aria-hidden />
-            <h2 className="text-lg font-semibold">Sẵn sàng!</h2>
+            <h2 className="text-lg font-semibold">Agent đã sẵn sàng</h2>
             <p className="text-sm text-muted-foreground">
               {draft.shopName} đã có agent {draft.identity.name} trực tin nhắn.
             </p>
@@ -175,10 +189,7 @@ export function OnboardingWizard() {
               />
               <Link
                 href="/dashboard"
-                onClick={() => {
-                  resetSetup();
-                  requestTour("guide");
-                }}
+                onClick={finishOnboarding}
                 className={buttonVariants({ size: "lg", className: "w-full" })}
               >
                 Vào Dashboard
@@ -221,14 +232,11 @@ export function OnboardingWizard() {
                 onClick={() => setShowChat(true)}
               >
                 <MessageSquare className="size-4" aria-hidden />
-                Chat thử
+                Chat thử với {draft.identity.name}
               </Button>
               <Link
                 href="/dashboard"
-                onClick={() => {
-                  resetSetup();
-                  requestTour("guide");
-                }}
+                onClick={finishOnboarding}
                 className={buttonVariants({ size: "lg", className: "w-full" })}
               >
                 Vào Dashboard
@@ -280,10 +288,21 @@ export function OnboardingWizard() {
               Hoàn tất
             </Button>
           ) : (
-            <Button size="lg" onClick={goNext} disabled={!step.canNext(draft)}>
-              Tiếp tục
-              <ArrowRight className="size-4" aria-hidden />
-            </Button>
+            <div className="flex items-center gap-3">
+              {step.skippable && (
+                <button
+                  type="button"
+                  onClick={goNext}
+                  className="rounded-md px-2 py-1 text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                >
+                  Bỏ qua, thêm sau
+                </button>
+              )}
+              <Button size="lg" onClick={goNext} disabled={!step.canNext(draft)}>
+                Tiếp tục
+                <ArrowRight className="size-4" aria-hidden />
+              </Button>
+            </div>
           )}
         </div>
       </CardContent>

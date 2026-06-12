@@ -39,7 +39,7 @@ export function ApprovalQueue({
           className="rounded-t-none rounded-b-lg"
           onDismiss={() => setDoneDismissed(true)}
         >
-          Không còn đơn nào chờ bạn duyệt.
+          Không còn đơn nào cần bạn duyệt.
         </DismissibleBanner>
       </TopbarBannerSlot>
     );
@@ -69,7 +69,7 @@ export function ApprovalQueue({
           )
         }
       >
-        <span className="font-semibold text-amber-900">{pending.length} đơn chờ bạn duyệt</span>
+        <span className="font-semibold text-amber-900">{pending.length} đơn cần bạn duyệt</span>
         <span className="text-amber-800"> — agent đã chuyển để bạn xác nhận trước khi xử lý.</span>
       </DismissibleBanner>
     </TopbarBannerSlot>

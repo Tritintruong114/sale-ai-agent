@@ -11,9 +11,9 @@ import {
   payState,
   paymentTimeline,
   paymentTimelineIcon,
-  qrCells,
   type Payment,
 } from "./meta";
+import { QrGlyph } from "./QrGlyph";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -32,34 +32,6 @@ function StateChip({ p }: { p: Payment }) {
       <Icon className="size-3" aria-hidden />
       {m.label}
     </span>
-  );
-}
-
-// Ô định vị QR (finder pattern) — khai báo ngoài render để không tạo component mỗi lần vẽ.
-function QrFinder({ className }: { className: string }) {
-  return (
-    <span className={cn("absolute size-[28%] rounded-[3px] border-[5px] border-foreground bg-background", className)}>
-      <span className="absolute inset-[3px] rounded-[1px] bg-foreground" />
-    </span>
-  );
-}
-
-// Mã QR mock — lưới ô tất định (qrCells) + 3 ô định vị 4 góc cho ra dáng QR thật. Chỉ trang trí, không quét được.
-function QrGlyph({ seed }: { seed: string }) {
-  const n = 21;
-  const cells = qrCells(seed, n);
-  return (
-    <div className="relative aspect-square w-40 rounded-lg bg-background p-2 ring-1 ring-foreground/15">
-      <div className="grid size-full gap-px" style={{ gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))` }} aria-hidden>
-        {cells.map((on, i) => (
-          <span key={i} className={cn("rounded-[1px]", on ? "bg-foreground" : "bg-transparent")} />
-        ))}
-      </div>
-      {/* Ô định vị che 3 góc */}
-      <QrFinder className="left-2 top-2" />
-      <QrFinder className="right-2 top-2" />
-      <QrFinder className="bottom-2 left-2" />
-    </div>
   );
 }
 
@@ -154,17 +126,18 @@ export function PaymentDetailPanel({
                 <CopyRow label="Nội dung CK" value={payMemo(payment)} />
               </div>
             </div>
-            <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+            {/* <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
               <QrCode className="size-3 shrink-0" aria-hidden />
               {state === "paid"
                 ? "Khách đã thanh toán theo mã này."
                 : "Khách quét mã để chuyển khoản — hệ thống tự khớp theo nội dung CK."}
-            </p>
+            </p> */}
           </Section>
         ) : null}
 
         {/* Timeline log */}
-        <Section title="Diễn biến thanh toán">
+        <Section title="Thanh toán">  
+
           <ol className="relative space-y-3.5 before:absolute before:bottom-2 before:left-[15px] before:top-2 before:w-px before:bg-border">
             {events.map((ev, i) => {
               const Icon = paymentTimelineIcon(ev.label);

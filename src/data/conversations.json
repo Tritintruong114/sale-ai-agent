@@ -32,7 +32,7 @@
         { "id": "m-002-1", "role": "customer", "text": "Cho mình 1 giỏ quà trái cây tặng bạn với ạ" },
         { "id": "m-002-2", "role": "agent", "text": "Dạ bên em có Giỏ Tinh Khôi 550.000đ, tông trắng xanh thanh khiết ạ. Thêm 1kg Xoài nữa là tổng 640.000đ. Mình lấy combo này nhé?" },
         { "id": "m-002-3", "role": "customer", "text": "Ừ mình lấy, ship về Quận 7 nha" },
-        { "id": "m-002-4", "role": "system", "text": "Cần người: Khách muốn mua (dấu hiệu chốt đơn) — đơn 640.000đ cần bạn duyệt" }
+        { "id": "m-002-4", "role": "system", "text": "Cần bạn trả lời: Khách muốn mua (dấu hiệu chốt đơn) — đơn 640.000đ cần bạn duyệt" }
       ]
     },
     {
@@ -63,7 +63,7 @@
       "messages": [
         { "id": "m-004-1", "role": "customer", "text": "Lấy sỉ sầu riêng với nho, bớt cho mình 20% được không?" },
         { "id": "m-004-2", "role": "agent", "text": "Dạ mức giảm 20% vượt thẩm quyền của em ạ. Em chuyển chủ shop xác nhận giúp mình nhé." },
-        { "id": "m-004-3", "role": "system", "text": "Cần người: Khách xin giảm giá quá 15%" }
+        { "id": "m-004-3", "role": "system", "text": "Cần bạn trả lời: Khách xin giảm giá quá 15%" }
       ]
     },
     {
@@ -79,7 +79,7 @@
       "messages": [
         { "id": "m-005-1", "role": "customer", "text": "Đơn lần trước giao thiếu mất 1kg vải thiều nhé, shop kiểm tra lại" },
         { "id": "m-005-2", "role": "agent", "text": "Dạ em rất xin lỗi về sự bất tiện này ạ. Em chuyển chủ shop kiểm tra và phản hồi mình ngay ạ." },
-        { "id": "m-005-3", "role": "system", "text": "Cần người: Khách phàn nàn" }
+        { "id": "m-005-3", "role": "system", "text": "Cần bạn trả lời: Khách phàn nàn" }
       ]
     },
     {

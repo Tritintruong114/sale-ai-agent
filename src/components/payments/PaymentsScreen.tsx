@@ -18,13 +18,12 @@ import {
 } from "./PaymentTable";
 import { PaymentsToolbar, type PayStateFilter } from "./PaymentsToolbar";
 import { PaymentDetailPanel } from "./PaymentDetailPanel";
-import { PaymentSettings } from "./PaymentSettings";
-import { payState, toPayment, type PaymentSeed, type Payment } from "./meta";
+import { payState, toPayment, PAYMENTS_METRICS_ENABLED, type PaymentSeed, type Payment } from "./meta";
 
-// M5 Thanh toán (HITL) — tách 3 góc nhìn (SegmentView §6.11, đồng bộ Orders/Products):
+// M5 Thanh toán (HITL) — tách 2 góc nhìn (SegmentView §6.11, đồng bộ Orders/Products):
 //   • Chỉ số (metrics) — đọc: KPI phễu + dòng tiền + phân bổ trạng thái. Căn giữa max-w-6xl (§6.11).
-//   • Thu tiền (collect) — thao tác: zone duyệt HITL (hoàn tiền/khoản cần xác nhận) + bảng §6.12 (lọc/sắp/phân trang). Full-width.
-//   • Cài đặt (settings) — cấu hình: tự tạo QR + chọn cổng thanh toán. Căn giữa max-w-4xl (§6.14).
+//   • Thu tiền (collect) — thao tác: zone duyệt HITL (khoản cần bạn xác nhận trước khi gửi QR) + bảng §6.12 (lọc/sắp/phân trang). Full-width.
+// Cấu hình cổng thanh toán tách thành màn riêng (/payment-gateway) trong nhóm Cài đặt.
 // needsApproval phải qua bước Duyệt; duyệt xong agent tự gửi QR. Đọc mock payments.json. Bám design.md §5/§6.
 
 const INITIAL: Payment[] = (raw.queue as PaymentSeed[]).map(toPayment);
@@ -48,9 +47,10 @@ export function PaymentsScreen({ initialTab, initialId }: { initialTab?: string;
   const setPaymentsTab = useUiStore((s) => s.setPaymentsTab);
 
   // Deep-link ?tab= khi vào màn → set vào store (§6.11). Có ?p= (1 khoản thu) → panel sống ở tab Thu tiền.
+  // Tab Chỉ số đang tạm ẩn → deep-link ?tab=metrics ép về "collect".
   useEffect(() => {
-    if (initialTab === "metrics" || initialTab === "collect" || initialTab === "settings")
-      setPaymentsTab(initialTab);
+    if (initialTab === "metrics") setPaymentsTab(PAYMENTS_METRICS_ENABLED ? "metrics" : "collect");
+    else if (initialTab === "collect") setPaymentsTab("collect");
     else if (initialId) setPaymentsTab("collect");
   }, [initialTab, initialId, setPaymentsTab]);
 
@@ -114,24 +114,20 @@ export function PaymentsScreen({ initialTab, initialId }: { initialTab?: string;
   );
 
   return (
-    // Tab Chỉ số: căn giữa max-w-6xl (§6.11). Tab Cài đặt: căn giữa max-w-4xl. Tab Thu tiền: full-width, cao bằng vùng main.
+    // Tab Chỉ số: căn giữa max-w-6xl (§6.11). Tab Thu tiền: full-width, cao bằng vùng main.
     <div
       className={cn(
         "flex w-full flex-col gap-6",
         tab === "metrics" && "mx-auto max-w-6xl",
-        tab === "settings" && "mx-auto max-w-4xl",
         tab === "collect" && "h-full min-h-0 gap-4",
       )}
     >
-      {tab === "settings" ? (
-        /* Tab Cài đặt — cấu hình thu tiền: tự tạo QR + chọn cổng thanh toán. */
-        <PaymentSettings />
-      ) : tab === "metrics" ? (
-        /* Tab Chỉ số — đọc số liệu, chỉ xem. */
+      {PAYMENTS_METRICS_ENABLED && tab === "metrics" ? (
+        /* Tab Chỉ số — đọc số liệu, chỉ xem (đang tạm ẩn). */
         <>
           <header className="min-w-0">
             <p className="text-xs text-muted-foreground sm:text-sm">
-              Theo dõi thanh toán theo đơn, duyệt hoàn tiền và khoản cần xác nhận.
+              Theo dõi dòng tiền và tình trạng thu tiền theo từng đơn.
             </p>
             <h1 className="text-pretty text-base font-semibold sm:text-lg">
               {pending.length > 0 ? (
@@ -140,7 +136,7 @@ export function PaymentsScreen({ initialTab, initialId }: { initialTab?: string;
                   <span className="text-amber-600">{pending.length} khoản cần bạn duyệt.</span>
                 </>
               ) : (
-                <span className="text-emerald-600">Không còn khoản nào chờ duyệt — agent đang tự gửi QR cho khách.</span>
+                <span className="text-emerald-600">Không còn khoản nào cần bạn duyệt — agent đang tự gửi QR cho khách.</span>
               )}
             </h1>
           </header>

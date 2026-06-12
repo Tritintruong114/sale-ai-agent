@@ -1,21 +1,18 @@
 "use client";
 
-import { Globe, Store } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
+import { Switch } from "@/components/ui/switch";
 import type { StepProps } from "../types";
 
-const TYPES = [
-  { key: "online", label: "Bán online", icon: Globe },
-  { key: "store", label: "Có cửa hàng", icon: Store },
-] as const;
-
 export function StepCreateShop({ draft, update }: StepProps) {
+  const hasStore = draft.shopType.includes("store");
+
+  const toggleStore = (on: boolean) =>
+    update({ shopType: on ? ["store"] : draft.shopType.filter((x) => x !== "store") });
+
   return (
     <div className="space-y-5">
-      <p className="text-sm text-muted-foreground">
-        Thông tin shop để agent giới thiệu với khách. Có thể đổi sau ở Cấu hình.
-      </p>
+    
 
       <label className="block space-y-2 text-sm">
         <span className="font-medium">Tên shop</span>
@@ -27,41 +24,17 @@ export function StepCreateShop({ draft, update }: StepProps) {
         />
       </label>
 
-      <div className="space-y-2 text-sm">
-        <span className="font-medium">
-          Loại hình <span className="font-normal text-muted-foreground">· chọn một hoặc cả hai</span>
+      <label className="flex items-center gap-3 rounded-lg px-3 py-2.5 ring-1 ring-foreground/10 transition-colors hover:bg-muted/50">
+        <Switch checked={hasStore} onCheckedChange={(v) => toggleStore(Boolean(v))} />
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-medium">Có cửa hàng</span>
+          {/* <span className="block text-xs text-muted-foreground">
+            Bật nếu shop có địa chỉ để khách ghé hoặc nhận hàng.
+          </span> */}
         </span>
-        <div className="grid grid-cols-2 gap-2">
-          {TYPES.map((t) => {
-            const Icon = t.icon;
-            const active = draft.shopType.includes(t.key);
-            return (
-              <button
-                key={t.key}
-                type="button"
-                onClick={() =>
-                  update({
-                    shopType: active
-                      ? draft.shopType.filter((x) => x !== t.key)
-                      : [...draft.shopType, t.key],
-                  })
-                }
-                aria-pressed={active}
-                className={cn(
-                  "flex items-center gap-2 rounded-xl border p-3 text-left transition-colors",
-                  "focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
-                  active ? "border-primary bg-primary/5" : "hover:bg-muted",
-                )}
-              >
-                <Icon className="size-5 shrink-0 text-muted-foreground" aria-hidden />
-                <span className="font-medium">{t.label}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
+      </label>
 
-      {draft.shopType.includes("store") && (
+      {hasStore && (
         <div className="space-y-5 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-top-1">
           <label className="block space-y-2 text-sm">
             <span className="font-medium">Địa chỉ cửa hàng</span>

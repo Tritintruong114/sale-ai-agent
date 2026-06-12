@@ -10,7 +10,7 @@ type AgentConfigStore = {
   resetToDefault: () => void;
 };
 
-// Config lưu từ phiên cũ có thể thiếu field handoff mới (description/category/triggerPhrases).
+// Config lưu từ phiên cũ có thể thiếu field handoff mới (description/triggerPhrases).
 // Backfill từ DEFAULT_CONFIG theo key để tránh vỡ render sau khi nâng cấp.
 function normalizeHandoffRules(rules: HandoffRule[] | undefined): HandoffRule[] {
   if (!Array.isArray(rules)) return DEFAULT_CONFIG.handoffRules;
@@ -19,7 +19,6 @@ function normalizeHandoffRules(rules: HandoffRule[] | undefined): HandoffRule[] 
     return {
       ...r,
       description: r.description ?? base?.description ?? "",
-      category: r.category ?? base?.category ?? "capability",
       triggerPhrases: r.triggerPhrases ?? base?.triggerPhrases ?? [],
       thresholdUnit: r.thresholdUnit ?? base?.thresholdUnit,
     };

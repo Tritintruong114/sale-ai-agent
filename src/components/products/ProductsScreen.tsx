@@ -2,16 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { PackageSearch, TriangleAlert } from "lucide-react";
+import { PackageSearch } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { DismissibleBanner } from "@/components/ui/dismissible-banner";
-import { TopbarBannerSlot } from "@/components/shell/TopbarBannerSlot";
+import { Pagination } from "@/components/ui/pagination";
 import { cn } from "@/lib/utils";
 import { useUiStore } from "@/store/uiStore";
 import raw from "@/data/products.json";
-import { ProductKpis } from "./ProductKpis";
-import { ProductsToolbar, type StockFilter, type View } from "./ProductsToolbar";
-import { ProductCard } from "./ProductCard";
+import { ProductsToolbar } from "./ProductsToolbar";
 import {
   ProductList,
   PRODUCT_SORT_DEFAULT_DIR,
@@ -21,54 +18,53 @@ import {
 } from "./ProductList";
 import { ProductDetailPanel } from "./ProductDetailPanel";
 import { AddProductsDialog } from "./AddProductsDialog";
-import { stockState, type CatalogItem } from "./meta";
+import { type CatalogItem } from "./meta";
 
-// M3 Sản phẩm — master–detail (như Orders): lede + KPI + banner + toolbar + lưới card + panel chi tiết docked.
-// Panel chi tiết liên kết sang Đơn (?o=) / Hội thoại (?c=) / Thanh toán / Agent — "toàn bộ luồng liên quan".
+// M3 Sản phẩm — master–detail (như Orders): toolbar + lưới card + panel chi tiết docked.
 
 const INITIAL = raw.catalog as CatalogItem[];
 
-export function ProductsScreen({ initialId, initialTab }: { initialId?: string; initialTab?: string }) {
+export function ProductsScreen({ initialId }: { initialId?: string; initialTab?: string }) {
   const router = useRouter();
   const [catalog, setCatalog] = useState<CatalogItem[]>(INITIAL);
   const [query, setQuery] = useState("");
-  const [stock, setStock] = useState<StockFilter>("all");
   const [sortKey, setSortKey] = useState<ProductSortKey>("newest");
   const [sortDir, setSortDir] = useState<ProductSortDir>("desc");
-  const [view, setView] = useState<View>("list"); // mặc định Danh sách
+  const [listPage, setListPage] = useState(1); // phân trang danh sách (1-based)
+  const [listPageSize, setListPageSize] = useState(10);
   const [createOpen, setCreateOpen] = useState(false);
+  // Tạo thủ công: bản nháp sản phẩm mới hiển thị trong slide-panel (mode="create"). Loại trừ với selectedId.
+  const [newDraft, setNewDraft] = useState<CatalogItem | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(
     initialId && INITIAL.some((p) => p.id === initialId) ? initialId : null,
   );
 
-  // Tab nằm trên topbar (TopBar) — đồng bộ qua uiStore. Vào bằng deep-link tới 1 sản phẩm → mở tab Sản phẩm.
-  const tab = useUiStore((s) => s.productsTab);
+  // Mở chi tiết 1 sản phẩm (đóng nháp tạo mới nếu đang mở — hai luồng loại trừ nhau).
+  const openProduct = (id: string) => {
+    setNewDraft(null);
+    setSelectedId((cur) => (cur === id ? null : id));
+  };
+  // Bắt đầu thêm thủ công — mở slide-panel rỗng (mode tạo), đóng chi tiết đang xem.
+  const startCreate = () => {
+    setSelectedId(null);
+    setNewDraft({ id: `cat-new-${Date.now()}`, name: "", price: 0, description: "", imageHint: "" });
+  };
+
+  // Tab nằm trên topbar — đồng bộ qua uiStore. Tab Tổng quan đang tạm ẩn → luôn ép về "products".
   const setProductsTab = useUiStore((s) => s.setProductsTab);
   useEffect(() => {
-    if (selectedId) setProductsTab("products");
-  }, [selectedId, setProductsTab]);
+    setProductsTab("products");
+  }, [setProductsTab]);
 
-  // Deep-link ?tab= khi vào màn → set vào store.
-  useEffect(() => {
-    if (initialTab === "overview" || initialTab === "products") setProductsTab(initialTab);
-  }, [initialTab, setProductsTab]);
-
-  // …và đổi tab / sản phẩm đang mở thì ghi ngược lên thanh địa chỉ (replace, không nhảy cuộn).
+  // Đổi sản phẩm đang mở thì ghi ngược lên thanh địa chỉ (replace, không nhảy cuộn).
   useEffect(() => {
     const qs = new URLSearchParams();
-    qs.set("tab", tab);
+    qs.set("tab", "products");
     if (selectedId) qs.set("p", selectedId);
     router.replace(`/products?${qs.toString()}`, { scroll: false });
-  }, [tab, selectedId, router]);
+  }, [selectedId, router]);
 
-  const stockCounts = useMemo(() => {
-    const m: Record<string, number> = { all: catalog.length, in_stock: 0, low: 0, out: 0 };
-    for (const p of catalog) m[stockState(p)] += 1;
-    return m;
-  }, [catalog]);
-
-  const lowStockCount = stockCounts.low + stockCounts.out;
-  const hasFilters = query.trim() !== "" || stock !== "all" || sortKey !== "newest";
+  const hasFilters = query.trim() !== "" || sortKey !== "newest";
 
   // Sắp xếp do header bảng + Select toolbar cùng quản (controlled). Bấm lại cột đang sắp → đảo chiều;
   // sang cột mới → dùng hướng mặc định của cột. Select đặt thẳng (key, dir).
@@ -81,31 +77,49 @@ export function ProductsScreen({ initialId, initialTab }: { initialId?: string; 
     else applySort(key, PRODUCT_SORT_DEFAULT_DIR[key]);
   };
 
-  // Banner cảnh báo tồn kho — tắt được tại chỗ. Lưu mốc số lượng lúc tắt: nếu sau đó
-  // số sản phẩm sắp/hết hàng tăng lên thì hiện lại (việc mới), bằng thì giữ ẩn.
-  const [stockBannerDismissedAt, setStockBannerDismissedAt] = useState(0);
-  const showStockBanner = lowStockCount > 0 && lowStockCount > stockBannerDismissedAt;
-
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
     const list = catalog.filter((p) => {
-      if (stock !== "all" && stockState(p) !== stock) return false;
       if (!q) return true;
       return p.name.toLowerCase().includes(q) || p.description.toLowerCase().includes(q);
     });
     return sortProducts(list, sortKey, sortDir);
-  }, [catalog, query, stock, sortKey, sortDir]);
+  }, [catalog, query, sortKey, sortDir]);
+
+  // Phân trang chế độ Danh sách: về trang 1 khi tập kết quả đổi (lọc/tìm/sắp xếp/cỡ trang).
+  // Reset ngay khi render (pattern chỉnh-state-lúc-render của dự án, không dùng effect), kẹp khi vượt biên.
+  const listPageCount = Math.max(1, Math.ceil(visible.length / listPageSize));
+  const filterSig = `${query}|${sortKey}|${sortDir}|${listPageSize}`;
+  const [prevFilterSig, setPrevFilterSig] = useState(filterSig);
+  if (filterSig !== prevFilterSig) {
+    setPrevFilterSig(filterSig);
+    setListPage(1);
+  }
+  const safeListPage = Math.min(listPage, listPageCount);
+  const pagedVisible = useMemo(
+    () => visible.slice((safeListPage - 1) * listPageSize, safeListPage * listPageSize),
+    [visible, safeListPage, listPageSize],
+  );
 
   const selected = catalog.find((p) => p.id === selectedId) ?? null;
 
   const resetFilters = () => {
     setQuery("");
-    setStock("all");
     applySort("newest", PRODUCT_SORT_DEFAULT_DIR.newest);
   };
 
   const patchItem = (id: string, patch: Partial<CatalogItem>) =>
     setCatalog((prev) => prev.map((p) => (p.id === id ? { ...p, ...patch } : p)));
+
+  // Tạm ngưng / mở bán lại — đảo cờ paused tại chỗ (dùng cho cả nút trên bảng lẫn panel chi tiết).
+  const togglePause = (id: string) =>
+    setCatalog((prev) => prev.map((p) => (p.id === id ? { ...p, paused: !p.paused } : p)));
+
+  // Xoá khỏi danh mục (prototype: chỉ bỏ khỏi state) + đóng panel chi tiết.
+  const removeItem = (id: string) => {
+    setCatalog((prev) => prev.filter((p) => p.id !== id));
+    setSelectedId((cur) => (cur === id ? null : cur));
+  };
 
   const addItems = (items: CatalogItem[]) => {
     if (items.length === 0) return;
@@ -114,166 +128,113 @@ export function ProductsScreen({ initialId, initialTab }: { initialId?: string; 
   };
 
   return (
-    // 2 tab đồng bộ qua uiStore. Tab Tổng quan: trang căn giữa max-w-6xl, cuộn bình thường. Tab Sản phẩm:
-    // full-width, cao bằng vùng main (h-full) — toolbar trong card header cố định, danh sách cuộn nội bộ
+    // Full-width, cao bằng vùng main (h-full) — toolbar trong card header cố định, danh sách cuộn nội bộ
     // (đồng bộ Orders/Payments §6.x).
-    <div
-      className={cn(
-        "flex w-full flex-col gap-4",
-        tab === "products" ? "h-full min-h-0" : "mx-auto max-w-6xl",
-      )}
-    >
-      {tab === "overview" ? (
-        /* Tab Tổng quan — đọc số liệu, chỉ xem. */
-        <div className="flex flex-col gap-6">
-          {/* Lede §6.2 */}
-          <header className="min-w-0">
-            <p className="text-xs text-muted-foreground sm:text-sm">
-              Quản lý danh mục agent tư vấn và chốt đơn, theo dõi tồn kho.
-            </p>
-            <h1 className="text-pretty text-base font-semibold sm:text-lg">
-              {catalog.length} sản phẩm trong danh mục,{" "}
-              {lowStockCount > 0 ? (
-                <span className="text-amber-600">{lowStockCount} sản phẩm sắp/hết hàng cần nhập thêm.</span>
-              ) : (
-                <span className="text-emerald-600">tồn kho đang ổn.</span>
-              )}
-            </h1>
-          </header>
+    <div className="flex h-full min-h-0 w-full flex-col gap-4">
+      {/* Vùng làm việc — card bao toolbar (header border-b) + danh sách cuộn + panel chi tiết docked phải.
+          Đồng bộ Orders/Payments: toolbar là header của card, không nổi trần. */}
+      <div
+        className={cn(
+          "flex min-h-0 flex-1 flex-col",
+          (selected || newDraft) && "lg:grid lg:grid-cols-[1fr_22rem] lg:gap-4",
+        )}
+      >
+        <section
+          aria-labelledby="catalog-h"
+          className={cn(
+            "flex min-h-0 flex-1 flex-col rounded-xl bg-card ring-1 ring-foreground/10",
+            (selected || newDraft) && "hidden lg:flex",
+          )}
+        >
+          <h2 id="catalog-h" className="sr-only">
+            Danh mục sản phẩm
+          </h2>
 
-          <section className="space-y-3" aria-labelledby="product-overview-h">
-            <h2 id="product-overview-h" className="text-lg font-semibold">
-              Tổng quan danh mục
-            </h2>
-            <ProductKpis catalog={catalog} />
-          </section>
-        </div>
-      ) : (
-        /* Tab Sản phẩm — banner + toolbar + lưới card + panel chi tiết */
-        <>
-          {/* Banner cảnh báo §6.7 — đẩy vào slot dưới topbar (dán sát, full-width, bo 2 góc dưới) */}
-          {showStockBanner ? (
-            <TopbarBannerSlot>
-              <DismissibleBanner
-                tone="amber"
-                icon={TriangleAlert}
-                dense
-                className="rounded-t-none rounded-b-lg"
-                onDismiss={() => setStockBannerDismissedAt(lowStockCount)}
-                dismissLabel="Tắt cảnh báo tồn kho"
-                action={
-                  stock !== "low" ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setStock("low")}
-                      className="h-6 border-amber-300 bg-amber-100/50 px-2 text-[11px] text-amber-800 hover:bg-amber-100"
-                    >
-                      Xem
-                    </Button>
-                  ) : null
-                }
-              >
-                {lowStockCount} sản phẩm sắp/hết hàng — kiểm tra để agent không chốt đơn khi đã hết.
-              </DismissibleBanner>
-            </TopbarBannerSlot>
-          ) : null}
-
-          {/* Vùng làm việc — card bao toolbar (header border-b) + danh sách cuộn + panel chi tiết docked phải.
-              Đồng bộ Orders/Payments: toolbar là header của card, không nổi trần. */}
-          <div
-            className={cn(
-              "flex min-h-0 flex-1 flex-col",
-              selected && "lg:grid lg:grid-cols-[1fr_22rem] lg:gap-4",
-            )}
-          >
-            <section
-              aria-labelledby="catalog-h"
-              className={cn(
-                "flex min-h-0 flex-1 flex-col rounded-xl bg-card ring-1 ring-foreground/10",
-                selected && "hidden lg:flex",
-              )}
-            >
-              <h2 id="catalog-h" className="sr-only">
-                Danh mục sản phẩm
-              </h2>
-
-              {/* Toolbar — header cố định của card */}
-              <div className="shrink-0 rounded-t-xl border-b bg-card p-2">
-                <ProductsToolbar
-                  query={query}
-                  onQuery={setQuery}
-                  stock={stock}
-                  onStock={setStock}
-                  sortKey={sortKey}
-                  sortDir={sortDir}
-                  onSort={applySort}
-                  view={view}
-                  onView={setView}
-                  stockCounts={stockCounts}
-                  hasFilters={hasFilters}
-                  onReset={resetFilters}
-                  onCreate={() => setCreateOpen(true)}
-                />
-              </div>
-
-              {/* Lưới / Danh sách — cuộn nội bộ */}
-              <div className="min-h-0 flex-1 overflow-y-auto p-2.5">
-                {visible.length > 0 ? (
-                  view === "list" ? (
-                    <ProductList
-                      items={visible}
-                      selectedId={selectedId}
-                      onOpen={(id) => setSelectedId((cur) => (cur === id ? null : id))}
-                      sortKey={sortKey}
-                      sortDir={sortDir}
-                      onSort={toggleSort}
-                    />
-                  ) : (
-                    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                      {visible.map((p) => (
-                        <ProductCard
-                          key={p.id}
-                          item={p}
-                          selected={p.id === selectedId}
-                          onSelect={() => setSelectedId((cur) => (cur === p.id ? null : p.id))}
-                        />
-                      ))}
-                    </div>
-                  )
-                ) : (
-                  <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-foreground/15 py-16 text-center">
-                    <span className="flex size-10 items-center justify-center rounded-full bg-muted text-muted-foreground">
-                      <PackageSearch className="size-5" aria-hidden />
-                    </span>
-                    <p className="text-sm font-medium">Không có sản phẩm khớp bộ lọc</p>
-                    <p className="max-w-xs text-xs text-muted-foreground">
-                      Thử xoá bớt bộ lọc, hoặc tạo sản phẩm mới bằng agent.
-                    </p>
-                    {hasFilters ? (
-                      <Button variant="outline" size="sm" onClick={resetFilters} className="mt-1">
-                        Xoá lọc
-                      </Button>
-                    ) : null}
-                  </div>
-                )}
-              </div>
-            </section>
-
-            {/* Panel chi tiết — docked phải (lg+), full-width thay card trên mobile. Không overlay.
-                border (không ring): ring là box-shadow, bị ancestor overflow-hidden cắt mất viền trên/dưới */}
-            {selected ? (
-              <div className="min-h-0 flex-1 overflow-hidden rounded-xl border border-foreground/10 bg-card lg:h-full lg:flex-none">
-                <ProductDetailPanel
-                  item={selected}
-                  onClose={() => setSelectedId(null)}
-                  onChange={(patch) => patchItem(selected.id, patch)}
-                />
-              </div>
-            ) : null}
+          {/* Toolbar — header cố định của card */}
+          <div className="shrink-0 rounded-t-xl border-b bg-card p-2">
+            <ProductsToolbar
+              query={query}
+              onQuery={setQuery}
+              sortKey={sortKey}
+              sortDir={sortDir}
+              onSort={applySort}
+              hasFilters={hasFilters}
+              onReset={resetFilters}
+              onCreateManual={startCreate}
+              onCreateImport={() => setCreateOpen(true)}
+            />
           </div>
-        </>
-      )}
+
+          {/* Danh sách — cuộn nội bộ */}
+          <div className="min-h-0 flex-1 overflow-y-auto p-2.5">
+            {visible.length > 0 ? (
+              <ProductList
+                items={pagedVisible}
+                selectedId={selectedId}
+                onOpen={openProduct}
+                onTogglePause={togglePause}
+                sortKey={sortKey}
+                sortDir={sortDir}
+                onSort={toggleSort}
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-foreground/15 py-16 text-center">
+                <span className="flex size-10 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                  <PackageSearch className="size-5" aria-hidden />
+                </span>
+                <p className="text-sm font-medium">Không có sản phẩm khớp bộ lọc</p>
+                <p className="max-w-xs text-xs text-muted-foreground">
+                  Thử xoá bớt bộ lọc, hoặc thêm sản phẩm mới.
+                </p>
+                {hasFilters ? (
+                  <Button variant="outline" size="sm" onClick={resetFilters} className="mt-1">
+                    Xoá lọc
+                  </Button>
+                ) : null}
+              </div>
+            )}
+          </div>
+
+          {/* Footer phân trang — dính đáy card (không cuộn mất). */}
+          {visible.length > 0 ? (
+            <div className="shrink-0 border-t px-2.5 py-2">
+              <Pagination
+                page={safeListPage}
+                pageSize={listPageSize}
+                total={visible.length}
+                onPageChange={setListPage}
+                onPageSizeChange={setListPageSize}
+                unitLabel="sản phẩm"
+              />
+            </div>
+          ) : null}
+        </section>
+
+        {/* Panel chi tiết / tạo mới — docked phải (lg+), full-width thay card trên mobile. Không overlay.
+            border (không ring): ring là box-shadow, bị ancestor overflow-hidden cắt mất viền trên/dưới */}
+        {newDraft ? (
+          <div className="min-h-0 flex-1 overflow-hidden rounded-xl border border-foreground/10 bg-card lg:h-full lg:flex-none">
+            <ProductDetailPanel
+              mode="create"
+              item={newDraft}
+              onClose={() => setNewDraft(null)}
+              onCreate={(it) => {
+                addItems([it]); // prepend + chọn item mới (chuyển panel sang chế độ sửa)
+                setNewDraft(null);
+              }}
+            />
+          </div>
+        ) : selected ? (
+          <div className="min-h-0 flex-1 overflow-hidden rounded-xl border border-foreground/10 bg-card lg:h-full lg:flex-none">
+            <ProductDetailPanel
+              item={selected}
+              onClose={() => setSelectedId(null)}
+              onChange={(patch) => patchItem(selected.id, patch)}
+              onDelete={removeItem}
+            />
+          </div>
+        ) : null}
+      </div>
 
       <AddProductsDialog open={createOpen} onOpenChange={setCreateOpen} onAdd={addItems} />
     </div>

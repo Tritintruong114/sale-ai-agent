@@ -75,7 +75,7 @@ function downloadSample(method: MethodKey) {
   URL.revokeObjectURL(url);
 }
 
-// Draft → mục danh mục: mặc định tồn 20, chưa cảnh báo (mirror AgentCreateDialog). id gắn timestamp tránh trùng.
+// Draft → mục danh mục (mirror AgentCreateDialog). id gắn timestamp tránh trùng.
 function toCatalogItem(p: DraftProduct, seq: number): CatalogItem {
   return {
     id: `cat-${p.id}-${Date.now()}-${seq}`,
@@ -83,8 +83,6 @@ function toCatalogItem(p: DraftProduct, seq: number): CatalogItem {
     price: p.price,
     description: p.description,
     imageHint: p.imageHint,
-    stock: 20,
-    lowStock: false,
   };
 }
 
@@ -397,7 +395,7 @@ export function AddProductsDialog({
                     className="flex shrink-0 items-center gap-1.5 underline-offset-2 hover:text-foreground hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                   >
                     <Download className="size-3.5" aria-hidden />
-                    Tải file mẫu
+                    Tải tệp mẫu
                   </button>
                 )}
               </div>

@@ -11,13 +11,14 @@ export function OrderKpis({ orders }: { orders: Order[] }) {
   const isNew = orders.filter((o) => o.status === "new").length;
   const processing = orders.filter((o) => o.status === "processing").length;
   const pending = orders.filter((o) => o.approval === "pending").length;
-  const collected = orders.filter((o) => o.paymentStatus === "paid").reduce((s, o) => s + o.total, 0);
+  // Doanh thu = tổng đơn không bị từ chối (cùng tập với ProductMetrics "Doanh thu sản phẩm").
+  const revenue = orders.filter((o) => o.approval !== "rejected").reduce((s, o) => s + o.total, 0);
 
   const kpis: Kpi[] = [
     { key: "new", label: "Đơn mới", value: String(isNew), icon: Sparkles, chip: "bg-sky-100 text-sky-700" },
     { key: "processing", label: "Đang xử lý", value: String(processing), icon: Package, chip: "bg-indigo-100 text-indigo-700" },
-    { key: "pending", label: "Chờ duyệt", value: String(pending), icon: ShieldQuestion, chip: "bg-amber-100 text-amber-700", accent: pending > 0 },
-    { key: "collected", label: "Đã thu", value: compactVND(collected), icon: Banknote, chip: "bg-emerald-100 text-emerald-700" },
+    { key: "pending", label: "Cần duyệt", value: String(pending), icon: ShieldQuestion, chip: "bg-amber-100 text-amber-700", accent: pending > 0 },
+    { key: "revenue", label: "Doanh thu", value: compactVND(revenue), icon: Banknote, chip: "bg-emerald-100 text-emerald-700" },
   ];
 
   return (

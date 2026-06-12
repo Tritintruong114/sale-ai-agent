@@ -18,7 +18,7 @@
     { "conversationId": "c-004", "customerName": "Phạm Quốc Bảo", "note": "Xin giảm giá 20%" }
   ],
   "kpis": [
-    { "key": "chats", "label": "Hội thoại hôm nay", "value": 38, "deltaPct": 12 },
+    { "key": "chats", "label": "Hội thoại", "value": 38, "deltaPct": 12 },
     { "key": "new_customers", "label": "Khách mới", "value": 14, "deltaPct": 8 },
     { "key": "closed_orders", "label": "Đơn đã chốt", "value": 9, "deltaPct": 20 },
     { "key": "revenue", "label": "Doanh thu", "value": 2210000, "deltaPct": 15 }

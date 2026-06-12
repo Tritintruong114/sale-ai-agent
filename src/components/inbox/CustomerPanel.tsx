@@ -10,6 +10,7 @@ import {
   MapPin,
   MessageSquare,
   Package,
+  PanelRightClose,
   Pencil,
   Phone,
   Plus,
@@ -88,7 +89,6 @@ function initials(name: string): string {
 }
 
 // Tất định từ ISO (+07), không phụ thuộc "now" → tránh lệch hydrate.
-const dmy = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
 const dmyy = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`;
 const hhmm = (iso: string) => iso.slice(11, 16);
 
@@ -225,7 +225,7 @@ function ContactEditor({
           autoFocus
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
-          placeholder="VD: 0901 234 567"
+          placeholder="vd: 0901 234 567"
         />
       </div>
 
@@ -237,7 +237,7 @@ function ContactEditor({
           id="cust-address"
           value={address}
           onChange={(e) => setAddress(e.target.value)}
-          placeholder="VD: Q. Tân Bình, TP. Hồ Chí Minh"
+          placeholder="vd: Q. Tân Bình, TP. Hồ Chí Minh"
         />
       </div>
 
@@ -317,12 +317,14 @@ export function CustomerPanel({
   onSaveProfile,
   onOpenOrder,
   onClose,
+  onCollapse,
 }: {
   conversation: PanelConversation;
   profile: CustomerProfile | null;
   onSaveProfile: (next: Omit<CustomerProfile, "firstSeenAt">) => void;
   onOpenOrder: (orderId: string) => void;
-  onClose?: () => void;
+  onClose?: () => void; // đóng overlay (dưới lg)
+  onCollapse?: () => void; // thu gọn cột hồ sơ (lg+)
 }) {
   const [editing, setEditing] = useState(false);
 
@@ -390,7 +392,7 @@ export function CustomerPanel({
         key: "handoff",
         iso: conversation.lastMessageAt,
         icon: Flag,
-        title: "Cần người xử lý",
+        title: "Cần bạn trả lời",
         detail: conversation.handoff.reason,
         tone: "amber",
       });
@@ -423,7 +425,7 @@ export function CustomerPanel({
   return (
     <div className="flex h-full min-h-0 w-full flex-col">
       {/* Header hồ sơ */}
-      <div className="flex items-start gap-3 border-b p-4">
+      <div className="flex items-center gap-3 border-b p-4">
         <span
           aria-hidden
           className="flex size-11 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-semibold text-foreground ring-1 ring-foreground/10"
@@ -432,23 +434,27 @@ export function CustomerPanel({
         </span>
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold leading-tight">{conversation.customerName}</p>
-          <p className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
-            {conversation.channel === "facebook" ? (
-              <FacebookIcon className="size-3.5" />
-            ) : (
-              <ZaloIcon className="size-3.5 rounded-[3px]" />
-            )}
-            <span>{profile ? `Khách từ ${dmy(profile.firstSeenAt)}` : channelLabel(conversation.channel)}</span>
-          </p>
         </div>
+        {onCollapse ? (
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            className="-mr-1 hidden lg:inline-flex"
+            onClick={onCollapse}
+            aria-label="Thu gọn thông tin khách"
+            title="Thu gọn"
+          >
+            <PanelRightClose />
+          </Button>
+        ) : null}
         {onClose ? (
-          <Button variant="ghost" size="icon-sm" className="-mr-1 -mt-1 lg:hidden" onClick={onClose} aria-label="Đóng thông tin khách">
+          <Button variant="ghost" size="icon-sm" className="-mr-1 lg:hidden" onClick={onClose} aria-label="Đóng thông tin khách">
             <X />
           </Button>
         ) : null}
       </div>
 
-      <div className="min-h-0 flex-1 space-y-5 overflow-auto p-4">
+      <div className="min-h-0 flex-1 space-y-5 overflow-auto p-4 scrollbar-hide">
         {/* Chỉ số nhanh */}
         <div className="grid grid-cols-2 gap-2">
           <div className="rounded-lg bg-muted/50 px-3 py-2.5 ring-1 ring-foreground/5">
@@ -487,8 +493,8 @@ export function CustomerPanel({
             <ContactEditor profile={profile} onSave={onSaveProfile} onCancel={() => setEditing(false)} />
           ) : (
             <div className="space-y-3">
-              {/* Nguồn — suy từ kênh khách nhắn tới, luôn hiển thị */}
-              <InfoRow icon={<Share2 className="size-3.5" />} label="Nguồn">
+              {/* Kênh — suy từ kênh khách nhắn tới, luôn hiển thị */}
+              <InfoRow icon={<Share2 className="size-3.5" />} label="Kênh">
                 <span className="inline-flex items-center gap-1.5">
                   {conversation.channel === "facebook" ? (
                     <FacebookIcon className="size-4" />

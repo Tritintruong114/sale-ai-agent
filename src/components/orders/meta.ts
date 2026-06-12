@@ -17,6 +17,9 @@ import conversationsRaw from "@/data/conversations.json";
 // M2 — meta dùng chung cho màn Quản lý đơn. Bám hệ màu §5 design.md:
 // chip = bg-{hue}-100 text-{hue}-700 · dot = bg-{hue}-500 · tint trigger = border-{hue}-500/30 bg-{hue}-500/10.
 
+// Tab Chỉ số tạm ẩn — chỉ giữ tab Quản lý. Bật lại bằng cờ này (giống PRODUCTS_OVERVIEW_ENABLED).
+export const ORDERS_METRICS_ENABLED = false;
+
 export type OrderStatus = "new" | "processing" | "done";
 export type Approval = "auto" | "pending" | "confirmed" | "rejected";
 export type DeliveryStatus = "pending" | "packing" | "delivered";

@@ -5,11 +5,9 @@ import { usePathname, useRouter } from "next/navigation";
 import { Compass, PanelLeftClose, PanelLeftOpen, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUiStore } from "@/store/uiStore";
-import { useAgentConfig } from "@/store/agentConfigStore";
 import { useSetupStore } from "@/store/setupStore";
 import { PrototypeSwitcher } from "./PrototypeSwitcher";
-import { SetupChecklist } from "./SetupChecklist";
-import { PRIMARY_NAV, SETTINGS_NAV, type NavItem } from "./nav";
+import { NAV_GROUPS, type NavItem } from "./nav";
 
 // §2 design.md — SideNav: điều hướng chính dạng dọc bên trái.
 // Desktop: cột cố định, thu gọn được (useUiStore.collapsed → icon-only).
@@ -63,9 +61,7 @@ function NavLink({
             <span className="min-w-5 rounded-full bg-destructive px-1.5 py-0.5 text-center text-[11px] font-semibold tabular-nums text-white">
               {item.badge}
             </span>
-          ) : (
-            <span className="font-mono text-[10px] text-muted-foreground/50">{item.code}</span>
-          )}
+          ) : null}
         </>
       ) : null}
     </Link>
@@ -81,7 +77,6 @@ export function SideNav() {
   const setMobileOpen = useUiStore((s) => s.setMobileOpen);
   const requestTour = useUiStore((s) => s.requestTour);
   const resetSetup = useSetupStore((s) => s.reset);
-  const pageName = useAgentConfig((s) => s.config.channels.pageName);
 
   const isActive = (href: string) =>
     href === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(href);
@@ -122,13 +117,14 @@ export function SideNav() {
           </button>
         ) : (
           <>
-            <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary text-sm font-bold text-primary-foreground">
-              F
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold leading-tight">Fanpage AI Agent</p>
-              <p className="truncate text-xs text-muted-foreground">{pageName || "Prototype V0 · dữ liệu mẫu"}</p>
-            </div>
+            <img
+              src="/logo.webp"
+              alt="Sale AI Agent"
+              width={32}
+              height={32}
+              className="size-8 shrink-0 rounded-lg ring-1 ring-foreground/10"
+            />
+            <p className="min-w-0 flex-1 truncate text-sm font-semibold">Sale AI Agent</p>
             <button
               type="button"
               onClick={toggleCollapsed}
@@ -143,24 +139,24 @@ export function SideNav() {
       </div>
 
       <nav className={cn("flex-1 space-y-1 overflow-y-auto p-2")}>
-        {PRIMARY_NAV.map((item) => (
-          <NavLink key={item.href} item={item} active={isActive(item.href)} collapsed={collapsed} onNavigate={closeMobile} />
-        ))}
-
-        {!collapsed ? (
-          <div className="px-3 pb-1 pt-4 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-            Cài đặt
+        {NAV_GROUPS.map((group, gi) => (
+          <div key={group.label} className={cn(gi > 0 && "pt-1")}>
+            {/* Tiêu đề category — khi mở rộng là nhãn chữ, khi thu gọn là gạch ngăn (trừ nhóm đầu). */}
+            {!collapsed ? (
+              <div className="px-3 pb-1 pt-3 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                {group.label}
+              </div>
+            ) : gi > 0 ? (
+              <div className="mx-2 my-2 border-t border-foreground/10" aria-hidden />
+            ) : null}
+            <div className="space-y-1">
+              {group.items.map((item) => (
+                <NavLink key={item.href} item={item} active={isActive(item.href)} collapsed={collapsed} onNavigate={closeMobile} />
+              ))}
+            </div>
           </div>
-        ) : (
-          <div className="mx-2 my-2 border-t border-foreground/10" aria-hidden />
-        )}
-        {SETTINGS_NAV.map((item) => (
-          <NavLink key={item.href} item={item} active={isActive(item.href)} collapsed={collapsed} onNavigate={closeMobile} />
         ))}
       </nav>
-
-      {/* Checklist "Bắt đầu nhanh" — 3 việc để shop chạy được sau Onboarding (tự ẩn khi xong). */}
-      <SetupChecklist />
 
       <div className="space-y-1 border-t p-2">
         {/* Công cụ prototype — chuyển trạng thái dữ liệu demo (đưa từ Dashboard lên đây) */}
