@@ -84,8 +84,8 @@ export type AgentConfig = {
   handoffRules: HandoffRule[]; // tình huống bàn giao (M1.1)
   dailyLearning: { enabled: boolean; runAt: string; sources: LearningSource[] }; // G2
   byok: { mode: "platform" | "own"; providers: string[] }; // G1
-  // telegram/zalo = đã nối hay chưa; *Detail = định danh nhận tin (Chat ID / số Zalo) — optional để config cũ không vỡ.
-  notifyChannels: { telegram: boolean; zalo: boolean; telegramChatId?: string; zaloPhone?: string; events: string[] };
+  // telegram/zalo = đã nối hay chưa; *Token = bot token dùng gửi tin (Telegram BotFather / Zalo access token) — optional để config cũ không vỡ.
+  notifyChannels: { telegram: boolean; zalo: boolean; telegramToken?: string; zaloToken?: string; events: string[] };
   agentEnabled: boolean; // bật sau onboarding (O6)
 };
 
@@ -231,6 +231,6 @@ export const DEFAULT_CONFIG: AgentConfig = {
     ],
   },
   byok: { mode: "platform", providers: [] },
-  notifyChannels: { telegram: true, zalo: false, telegramChatId: "612894501", events: ["handoff", "big_order"] },
+  notifyChannels: { telegram: true, zalo: false, telegramToken: "7821456390:AAH9k2L_mockBotTokenForPrototype", events: ["handoff", "big_order"] },
   agentEnabled: true,
 };

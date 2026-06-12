@@ -379,7 +379,9 @@ export function AgentChatContent({ headerActions }: AgentChatContentProps) {
               ))}
             </SelectContent>
           </Select>
-          <p className="truncate text-xs text-muted-foreground">{active.subtitle}</p>
+          {"subtitle" in active && active.subtitle ? (
+            <p className="truncate text-xs text-muted-foreground">{active.subtitle}</p>
+          ) : null}
         </div>
         {headerActions ? <div className="flex shrink-0 items-center gap-0.5">{headerActions}</div> : null}
       </div>
