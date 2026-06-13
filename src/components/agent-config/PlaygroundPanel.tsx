@@ -1,8 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Bot, GraduationCap, SquarePen, Store } from "lucide-react";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Bot, GraduationCap, SquarePen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,7 +11,6 @@ import { AgentAvatar } from "@/components/shared/AgentAvatar";
 import { cn } from "@/lib/utils";
 import { AgentFilesManager } from "./AgentFilesManager";
 import { AGENT_FILES, type AgentFile } from "@/data/agentFiles";
-import { ShopInfoForm } from "@/components/shop-info/ShopInfoForm";
 import { useAgentConfig } from "@/store/agentConfigStore";
 import { useUiStore } from "@/store/uiStore";
 import { useTrainingStore } from "@/store/trainingStore";
@@ -159,7 +157,7 @@ export function PlaygroundPanel() {
       method: "playground",
       by: "Playground",
       scope: "Hội thoại thử ở Playground",
-      summary: `Re-train từ hội thoại thử (${turns} lượt khách).`,
+      summary: `Rút kinh nghiệm từ hội thoại với khách (${turns} lượt nhắn).`,
       files: [],
       status: "running",
     });
@@ -168,106 +166,48 @@ export function PlaygroundPanel() {
   return (
     // Workspace 2 cột bằng width (bám lưới Inbox) — Bối cảnh & khung chat mỗi bên 1 cột (card riêng), cách nhau bằng gap.
     <div className="grid h-[calc(100dvh-7rem)] min-h-[34rem] grid-cols-1 gap-4 lg:grid-cols-2">
-      {/* Cột trái — Bối cảnh agent đọc, tách theo tab — card riêng. */}
-      <aside className="hidden min-h-0 overflow-hidden rounded-xl bg-card ring-1 ring-foreground/10 lg:flex">
-        <Tabs defaultValue="identity" className="flex min-h-0 flex-1 flex-col gap-0">
-          <div className="flex items-center justify-between gap-2 border-b px-3 py-2">
-            <TabsList variant="line">
-              <TabsTrigger value="identity" title="Agent" aria-label="Agent"><Bot /></TabsTrigger>
-              <TabsTrigger value="shop" title="Shop" aria-label="Shop"><Store /></TabsTrigger>
-              {/* Tạm ẩn — bỏ comment để bật lại tab Sản phẩm & Bàn giao.
-              <TabsTrigger value="catalog" title="Products" aria-label="Products"><Package /></TabsTrigger>
-              <TabsTrigger value="handoff" title="Bàn giao" aria-label="Bàn giao"><Hand /></TabsTrigger>
-              */}
-            </TabsList>
-            <Button
-              variant="outline"
-              size="xs"
-              disabled={!dirty}
-              onClick={saveSync}
-              title={dirty ? "Lưu thay đổi & đồng bộ cho agent" : "Chưa có thay đổi nào"}
-              className={cn(
-                "shrink-0",
-                dirty
-                  ? "border-transparent bg-blue-600 text-white hover:bg-blue-700 hover:text-white"
-                  : "bg-white text-foreground",
-              )}
-            >
-              {dirty ? <span className="size-2 shrink-0 rounded-full bg-white" aria-hidden /> : null}
-              Lưu & đồng bộ
-            </Button>
+      {/* Cột trái — Bối cảnh agent đọc (danh tính & file định nghĩa) — card riêng. */}
+      <aside className="hidden min-h-0 flex-col overflow-hidden rounded-xl bg-card ring-1 ring-foreground/10 lg:flex">
+        <div className="flex items-center justify-between gap-2 border-b px-3 py-2">
+          <span className="flex items-center gap-1.5 text-sm font-semibold">
+            <Bot className="size-4 text-muted-foreground" aria-hidden />
+            Agent
+          </span>
+          <Button
+            variant="outline"
+            size="xs"
+            disabled={!dirty}
+            onClick={saveSync}
+            title={dirty ? "Lưu thay đổi & đồng bộ cho agent" : "Chưa có thay đổi nào"}
+            className={cn(
+              "shrink-0",
+              dirty
+                ? "border-transparent bg-blue-600 text-white hover:bg-blue-700 hover:text-white"
+                : "bg-white text-foreground",
+            )}
+          >
+            {dirty ? <span className="size-2 shrink-0 rounded-full bg-white" aria-hidden /> : null}
+            Lưu & đồng bộ
+          </Button>
+        </div>
+        {/* Danh tính & giọng — chỉnh trực tiếp, agent đọc lại ngay khi gửi tin kế tiếp. */}
+        <div className="min-h-0 flex-1 space-y-4 overflow-auto p-3 scrollbar-hide">
+          <div>
+            <FieldLabel>Tên agent</FieldLabel>
+            <Input className="mt-1" value={config.identity.name} onChange={(e) => setIdentity({ name: e.target.value })} />
           </div>
-          <div className="min-h-0 flex-1 overflow-auto p-3 scrollbar-hide">
-            {/* Danh tính & giọng — chỉnh trực tiếp, agent đọc lại ngay khi gửi tin kế tiếp. */}
-            <TabsContent value="identity" className="space-y-4">
-              <div>
-                <FieldLabel>Tên agent</FieldLabel>
-                <Input className="mt-1" value={config.identity.name} onChange={(e) => setIdentity({ name: e.target.value })} />
-              </div>
-              <div>
-                <FieldLabel>Xưng hô</FieldLabel>
-                <Input className="mt-1" value={config.identity.pronoun} onChange={(e) => setIdentity({ pronoun: e.target.value })} />
-              </div>
-              <div>
-                <FieldLabel>Lời chào</FieldLabel>
-                <Textarea className="mt-1" rows={2} value={config.identity.greeting} onChange={(e) => setIdentity({ greeting: e.target.value })} />
-              </div>
-              <div className="border-t pt-4">
-                <AgentFilesManager files={files} onChange={setFiles} />
-              </div>
-            </TabsContent>
-
-            {/* Thông tin shop — form chỉnh trực tiếp, dùng chung với màn Thông tin cửa hàng. */}
-            <TabsContent value="shop">
-              <ShopInfoForm />
-            </TabsContent>
-
-            {/* Sản phẩm — tạm ẩn (bỏ comment + bật lại TabsTrigger để dùng lại).
-            <TabsContent value="catalog" className="space-y-2">
-              <p className="text-[11px] text-muted-foreground">{catalog.length} sản phẩm trong danh mục</p>
-              {catalog.map((p) => (
-                <div key={p.id} className="flex items-start gap-3 rounded-lg px-2.5 py-2 ring-1 ring-foreground/10">
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-medium">{p.name}</span>
-                    {p.description ? (
-                      <span className="line-clamp-1 text-xs text-muted-foreground">{p.description}</span>
-                    ) : null}
-                  </span>
-                  <span className="shrink-0 text-right">
-                    <span className="block text-sm font-semibold">{formatVnd(p.price)}</span>
-                    {typeof p.stock === "number" ? (
-                      <span className={p.stock === 0 ? "text-[11px] text-destructive" : p.lowStock ? "text-[11px] text-amber-600" : "text-[11px] text-muted-foreground"}>
-                        {p.stock === 0 ? "Hết hàng" : `Còn ${p.stock}`}
-                      </span>
-                    ) : null}
-                  </span>
-                </div>
-              ))}
-            </TabsContent>
-
-            Tình huống bàn giao
-            <TabsContent value="handoff" className="space-y-2">
-              {config.handoffRules.map((r) => (
-                <div key={r.key} className="rounded-lg px-2.5 py-2 ring-1 ring-foreground/10">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-medium">{r.label}</span>
-                    <span className={r.enabled ? "shrink-0 text-[11px] font-medium text-emerald-600" : "shrink-0 text-[11px] text-muted-foreground"}>
-                      {r.enabled ? "Đang bật" : "Tắt"}
-                    </span>
-                  </div>
-                  <p className="mt-0.5 text-xs text-muted-foreground">{r.description}</p>
-                  {typeof r.threshold === "number" ? (
-                    <p className="mt-0.5 text-xs text-muted-foreground">
-                      Ngưỡng: {r.threshold}
-                      {r.thresholdUnit ?? ""}
-                    </p>
-                  ) : null}
-                </div>
-              ))}
-            </TabsContent>
-            */}
+          <div>
+            <FieldLabel>Xưng hô</FieldLabel>
+            <Input className="mt-1" value={config.identity.pronoun} onChange={(e) => setIdentity({ pronoun: e.target.value })} />
           </div>
-        </Tabs>
+          <div>
+            <FieldLabel>Lời chào</FieldLabel>
+            <Textarea className="mt-1" rows={2} value={config.identity.greeting} onChange={(e) => setIdentity({ greeting: e.target.value })} />
+          </div>
+          <div className="border-t pt-4">
+            <AgentFilesManager files={files} onChange={setFiles} />
+          </div>
+        </div>
       </aside>
 
       {/* Cột phải — khung chat mô phỏng Messenger (panel riêng, bo tròn góc trên, đáy phẳng như chat sheet). */}
@@ -296,11 +236,11 @@ export function PlaygroundPanel() {
             size="xs"
             onClick={retrainConversation}
             disabled={!hasChat}
-            title={hasChat ? undefined : "Cần ít nhất một lượt khách nhắn để re-train"}
+            title={hasChat ? undefined : "Cần ít nhất một lượt khách nhắn để đào tạo"}
             className="shrink-0"
           >
             <GraduationCap className="size-3.5" aria-hidden />
-            Re-train hội thoại
+            Đào tạo từ hội thoại
           </Button>
         </div>
         <div className="min-h-0 flex-1">

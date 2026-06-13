@@ -8,7 +8,7 @@ import { persist, createJSONStorage } from "zustand/middleware";
 // hiển thị xen cùng log tĩnh ở TrainingLog. Component đọc `added` dùng useHydrated để tránh lệch hydrate
 // (server render rỗng, client mới có localStorage) — xem TrainingLog.
 
-export type TrainingMethod = "playground" | "daily";
+export type TrainingMethod = "playground" | "daily" | "inbox";
 
 export type TrainingEntry = {
   id: string;

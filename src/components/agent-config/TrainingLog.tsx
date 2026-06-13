@@ -16,8 +16,9 @@ import trainingData from "@/data/training.json";
 // Bảng theo style chung của prototype (§4.4 surface): wrapper ring + overflow-x, header muted, divide-y.
 
 const METHOD_META: Record<TrainingMethod, { label: string; icon: typeof GraduationCap; className: string }> = {
-  playground: { label: "Playground", icon: FlaskConical, className: "border-violet-200 bg-violet-100 text-violet-700" },
+  playground: { label: "Đào tạo thủ công", icon: FlaskConical, className: "border-violet-200 bg-violet-100 text-violet-700" },
   daily: { label: "Tự học hằng ngày", icon: Sparkles, className: "border-sky-200 bg-sky-100 text-sky-700" },
+  inbox: { label: "Dạy từ hội thoại", icon: GraduationCap, className: "border-indigo-200 bg-indigo-100 text-indigo-700" },
 };
 
 const staticLog = trainingData.log as TrainingEntry[];
@@ -67,7 +68,7 @@ export function TrainingLog() {
         <caption className="sr-only">Nhật ký các lần đào tạo agent — agent, thời gian, hình thức và nội dung.</caption>
         <thead>
           <tr className="sticky top-0 z-10 border-b bg-muted [&_th]:h-9 [&_th]:px-3 [&_th]:align-middle [&_th]:text-[11px] [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-muted-foreground">
-            <th scope="col" className="w-52">Đào tạo agent</th>
+            <th scope="col" className="w-52">Agent</th>
             <th scope="col" className="w-36">Thời gian</th>
             <th scope="col" className="w-44">Hình thức</th>
             <th scope="col" className="w-72">Nội dung đào tạo</th>

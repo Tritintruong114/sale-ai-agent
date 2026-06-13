@@ -14,6 +14,9 @@ import { ORDERS_METRICS_ENABLED } from "@/components/orders/meta";
 import { DASHBOARD_MORE_INSIGHTS_ENABLED, MORE_INSIGHTS } from "@/components/dashboard/meta";
 import { TOPBAR_BANNER_SLOT_ID } from "./TopbarBannerSlot";
 
+// Prefix route tạm ẩn nút "Talk to Agent": Cấu hình Agent, Thông tin shop, các màn kết nối (Integrations).
+const HIDE_AGENT_CHAT_PREFIXES = ["/agent-config", "/shop-info", "/payment-gateway", "/crm", "/products", "/orders", "/inbox"];
+
 // Tiêu đề màn suy từ route (NAV_ITEMS — danh sách phẳng mọi mục nav) — §2 design.md.
 function pageTitle(pathname: string): string {
   const match = NAV_ITEMS
@@ -51,6 +54,10 @@ export function TopBar() {
   const isPlayground = pathname.startsWith("/playground");
   // Dashboard: nút chat đổi thành "More Insights" — mở chat + điền sẵn prompt xin agent phân tích số liệu.
   const showMoreInsights = pathname === "/dashboard" && DASHBOARD_MORE_INSIGHTS_ENABLED;
+  // Các màn tạm ẩn nút "Talk to Agent" trên topbar: Cấu hình Agent, Thông tin shop, các màn kết nối (Integrations).
+  const hideAgentChat =
+    (isPlayground && PLAYGROUND_HIDE_AGENT_CHAT) ||
+    HIDE_AGENT_CHAT_PREFIXES.some((p) => pathname.startsWith(p));
 
   // Bấm "More Insights": mở panel chat rồi đẩy prompt vào ô nhập (chủ shop tự gửi).
   const openMoreInsights = () => {
@@ -186,7 +193,7 @@ export function TopBar() {
             <Sparkles className="size-4" aria-hidden />
             <span className="hidden sm:inline">{MORE_INSIGHTS.label}</span>
           </Button>
-        ) : isPlayground && PLAYGROUND_HIDE_AGENT_CHAT ? null : (
+        ) : hideAgentChat ? null : (
           // Mở side panel trò chuyện với Agent
           <Button
             variant="outline"

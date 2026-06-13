@@ -214,7 +214,7 @@ export function CrmSettings() {
           <div className="min-w-0">
             <p className="font-medium">Tự động đẩy đơn sang CRM</p>
             <p className="mt-0.5 text-sm text-muted-foreground">
-              App tự đồng bộ đơn đã chốt sang phần mềm quản lý để lo kho vận, giao hàng
+              App tự đồng bộ đơn đã chốt sang phần mềm quản lý.
             </p>
           </div>
         </div>

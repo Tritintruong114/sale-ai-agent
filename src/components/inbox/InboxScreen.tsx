@@ -3,10 +3,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
+  ArrowRight,
   ArrowUpDown,
   Bot,
+  Check,
   ChevronLeft,
   Flag,
+  GraduationCap,
   Headset,
   Inbox,
   PanelRightOpen,
@@ -16,6 +19,9 @@ import {
 } from "lucide-react";
 import { ChatWindow } from "@/components/shared/chat/ChatWindow";
 import { CustomerPanel, type CustomerProfile } from "@/components/inbox/CustomerPanel";
+import { TrainAgentDialog, type TrainExampleKind } from "@/components/inbox/TrainAgentDialog";
+import { useTrainingStore } from "@/store/trainingStore";
+import { useHydrated } from "@/lib/useHydrated";
 import { FacebookIcon, ZaloIcon } from "@/components/icons/channel";
 import type { ChatMessage } from "@/components/shared/chat/MessageBubble";
 import { Badge } from "@/components/ui/badge";
@@ -213,6 +219,13 @@ function initials(name: string): string {
   return (first + last).toUpperCase();
 }
 
+// ISO giờ địa phương (không offset) cho mốc thời gian nhật ký đào tạo — khớp định dạng training.json.
+function localIso() {
+  const d = new Date();
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+}
+
 const channelLabel = (channel: string) => (channel === "facebook" ? "FB" : "Zalo");
 const needsHuman = (c: Conversation) => Boolean(c.handoff && !c.handoff.acknowledged);
 
@@ -256,6 +269,11 @@ export function InboxScreen({
   // Panel hồ sơ khách: cố định ở cột phải từ xl trở lên; dưới xl mở dạng overlay.
   const [panelOpen, setPanelOpen] = useState(false); // overlay hồ sơ khách (dưới lg)
   const [infoCollapsed, setInfoCollapsed] = useState(false); // thu gọn cột hồ sơ khách (lg+)
+  const [trainOpen, setTrainOpen] = useState(false); // modal "Dạy lại agent từ hội thoại"
+  // Nhật ký đào tạo (persist localStorage) — ghi lại mỗi lần "Dạy lại agent", chống gửi trùng theo hội thoại.
+  const addTrainingEntry = useTrainingStore((s) => s.addEntry);
+  const trainingAdded = useTrainingStore((s) => s.added);
+  const hydrated = useHydrated();
   const attentionCounts = useMemo<Record<AttentionFilter, number>>(
     () => ({
       all: conversations.length,
@@ -349,6 +367,51 @@ export function InboxScreen({
           id: `local-${selectedId}-${e.sent?.length ?? 0}`,
           role: "system",
           text: "Bạn đã nhận bàn giao — agent tạm dừng để bạn xử lý",
+        },
+      ],
+    }));
+  };
+
+  // Số lượt agent đã trả lời trong hội thoại — có lượt mới cho "Dạy lại agent".
+  const agentReplyCount = selected ? selected.messages.filter((m) => m.role === "agent").length : 0;
+  // Hội thoại này đã được gửi vào đào tạo chưa (đọc sau hydrate để tránh lệch SSR/localStorage).
+  const alreadyTrained = hydrated && selected ? trainingAdded.some((e) => e.conversationId === selected.id) : false;
+
+  // Gửi hội thoại vào Đào tạo Agent (mock): ghi vào nhật ký đào tạo (persist localStorage),
+  // đóng modal, để lại một dòng hệ thống xác nhận trong chat. Chống ghi trùng theo conversationId.
+  const trainFromConversation = (kind: TrainExampleKind, note: string) => {
+    if (!selectedId) return;
+    setTrainOpen(false);
+
+    if (!useTrainingStore.getState().hasConversation(selectedId)) {
+      const name = selected?.customerName ?? "khách";
+      addTrainingEntry({
+        id: `tr-inbox-${selectedId}`,
+        at: localIso(),
+        method: "inbox",
+        by: "Hộp thư",
+        scope: `Hội thoại với ${name}`,
+        summary:
+          `Hội thoại với ${name} — ${kind === "good" ? "đánh dấu trả lời tốt" : "cần chỉnh"}` +
+          (note ? `: ${note}` : ""),
+        files: [],
+        status: "running",
+        conversationId: selectedId,
+      });
+    }
+
+    patchEdit(selectedId, (e) => ({
+      ...e,
+      sent: [
+        ...(e.sent ?? []),
+        {
+          id: `local-${selectedId}-${e.sent?.length ?? 0}`,
+          role: "system",
+          text:
+            (kind === "good"
+              ? "Đã gửi hội thoại vào Đào tạo Agent — đánh dấu trả lời tốt"
+              : "Đã gửi hội thoại vào Đào tạo Agent — kèm ghi chú cần chỉnh") +
+            (note ? ` · “${note}”` : ""),
         },
       ],
     }));
@@ -640,6 +703,37 @@ export function InboxScreen({
                         />
                       </span>
                     </label>
+
+                    {/* Dùng hội thoại làm dữ liệu đào tạo — chỉ hiện khi agent đã có lượt trả lời để dạy.
+                        Sau khi gửi: chuyển trạng thái "đã gửi" (đã lưu vào nhật ký Đào tạo Agent). */}
+                    {agentReplyCount > 0 ? (
+                      alreadyTrained ? (
+                        <div
+                          className={cn(
+                            "flex w-full items-center gap-1.5 border-t px-2.5 py-2 text-xs font-medium text-emerald-700",
+                            selected.agentActive ? "border-violet-200" : "border-foreground/10",
+                          )}
+                        >
+                          <Check className="size-3.5" aria-hidden />
+                          Đã gửi vào đào tạo
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setTrainOpen(true)}
+                          className={cn(
+                            "flex w-full items-center gap-1.5 border-t px-2.5 py-2 text-xs font-medium text-foreground/80 transition-colors cursor-pointer",
+                            selected.agentActive
+                              ? "border-violet-200 hover:bg-violet-100/60"
+                              : "border-foreground/10 hover:bg-muted",
+                          )}
+                        >
+                          <GraduationCap className="size-3.5 text-violet-600" aria-hidden />
+                          Dạy lại agent từ hội thoại này
+                          <ArrowRight className="ml-auto size-3.5 text-muted-foreground" aria-hidden />
+                        </button>
+                      )
+                    ) : null}
                   </div>
 
                   {selected.handoff && !selected.handoff.acknowledged ? (
@@ -709,6 +803,14 @@ export function InboxScreen({
           </div>
         </div>
       ) : null}
+
+      {/* Modal: dùng hội thoại làm dữ liệu đào tạo cho Sale agent */}
+      <TrainAgentDialog
+        open={trainOpen && !!selected}
+        conversationId={selected?.id ?? null}
+        onClose={() => setTrainOpen(false)}
+        onSubmit={trainFromConversation}
+      />
     </div>
   );
 }

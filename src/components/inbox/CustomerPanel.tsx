@@ -17,7 +17,6 @@ import {
   Share2,
   ShoppingBag,
   StickyNote,
-  Tag,
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -30,14 +29,13 @@ import ordersRaw from "@/data/orders.json";
 import paymentsRaw from "@/data/payments.json";
 
 // Panel phải Inbox (prototype) — hồ sơ khách, chỉ số, đơn hàng & timeline.
-// Hồ sơ (phone/address/tags/note) sửa được tại chỗ; state do InboxScreen giữ.
+// Hồ sơ (phone/address/note) sửa được tại chỗ; state do InboxScreen giữ.
 // Đơn hàng & thanh toán suy từ orders.json + payments.json, ghép theo customerName.
 
 export type CustomerProfile = {
   phone: string;
   address: string;
   firstSeenAt: string;
-  tags: string[];
   note: string;
 };
 
@@ -131,28 +129,6 @@ function Section({
   );
 }
 
-// Màu nhãn tất định theo loại khách (đồng bộ hệ màu với timeline & trạng thái).
-const TAG_STYLE: Record<string, string> = {
-  VIP: "bg-amber-100 text-amber-700 ring-amber-200",
-  "Khách quen": "bg-emerald-100 text-emerald-700 ring-emerald-200",
-  "Khách mới": "bg-sky-100 text-sky-700 ring-sky-200",
-  Combo: "bg-violet-100 text-violet-700 ring-violet-200",
-};
-const DEFAULT_TAG = "bg-secondary text-secondary-foreground ring-foreground/10";
-
-function TagChip({ label }: { label: string }) {
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ring-1",
-        TAG_STYLE[label] ?? DEFAULT_TAG,
-      )}
-    >
-      {label}
-    </span>
-  );
-}
-
 // Một dòng thông tin: icon + nhãn (mờ, nhỏ) cùng hàng; giá trị xuống dưới.
 function InfoRow({
   icon,
@@ -179,7 +155,6 @@ function InfoRow({
 const EMPTY_PROFILE: Omit<CustomerProfile, "firstSeenAt"> = {
   phone: "",
   address: "",
-  tags: [],
   note: "",
 };
 
@@ -197,18 +172,10 @@ function ContactEditor({
   const base = profile ?? EMPTY_PROFILE;
   const [phone, setPhone] = useState(base.phone);
   const [address, setAddress] = useState(base.address);
-  const [tags, setTags] = useState<string[]>(base.tags);
   const [note, setNote] = useState(base.note);
-  const [tagInput, setTagInput] = useState("");
-
-  const addTag = () => {
-    const t = tagInput.trim();
-    if (t && !tags.includes(t)) setTags((prev) => [...prev, t]);
-    setTagInput("");
-  };
 
   const save = () => {
-    onSave({ phone: phone.trim(), address: address.trim(), tags, note: note.trim() });
+    onSave({ phone: phone.trim(), address: address.trim(), note: note.trim() });
     onCancel();
   };
 
@@ -239,52 +206,6 @@ function ContactEditor({
           onChange={(e) => setAddress(e.target.value)}
           placeholder="vd: Q. Tân Bình, TP. Hồ Chí Minh"
         />
-      </div>
-
-      <div className="space-y-1.5">
-        <label htmlFor="cust-tag" className="text-xs font-medium text-foreground">
-          Nhãn
-        </label>
-        {tags.length > 0 ? (
-          <div className="flex flex-wrap gap-1.5">
-            {tags.map((t) => (
-              <span
-                key={t}
-                className={cn(
-                  "flex items-center gap-1 rounded-full py-0.5 pl-2 pr-1 text-[11px] font-medium ring-1",
-                  TAG_STYLE[t] ?? DEFAULT_TAG,
-                )}
-              >
-                {t}
-                <button
-                  type="button"
-                  onClick={() => setTags((prev) => prev.filter((x) => x !== t))}
-                  aria-label={`Bỏ nhãn ${t}`}
-                  className="flex size-4 items-center justify-center rounded-full opacity-60 transition-opacity hover:bg-foreground/10 hover:opacity-100 cursor-pointer"
-                >
-                  <X className="size-2.5" aria-hidden />
-                </button>
-              </span>
-            ))}
-          </div>
-        ) : null}
-        <div className="flex gap-1.5">
-          <Input
-            id="cust-tag"
-            value={tagInput}
-            onChange={(e) => setTagInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                addTag();
-              }
-            }}
-            placeholder="Thêm nhãn rồi nhấn Enter"
-          />
-          <Button type="button" variant="outline" size="icon" onClick={addTag} aria-label="Thêm nhãn">
-            <Plus />
-          </Button>
-        </div>
       </div>
 
       <div className="space-y-1.5">
@@ -477,7 +398,7 @@ export function CustomerPanel({
         <Section
           title="Thông tin liên hệ"
           action={
-            !editing && profile && (profile.phone || profile.address || profile.note || profile.tags.length) ? (
+            !editing && profile && (profile.phone || profile.address || profile.note) ? (
               <button
                 type="button"
                 onClick={() => setEditing(true)}
@@ -522,16 +443,6 @@ export function CustomerPanel({
                 </InfoRow>
               ) : null}
 
-              {profile && profile.tags.length > 0 ? (
-                <InfoRow icon={<Tag className="size-3.5" />} label="Nhãn">
-                  <div className="flex flex-wrap gap-1.5">
-                    {profile.tags.map((t) => (
-                      <TagChip key={t} label={t} />
-                    ))}
-                  </div>
-                </InfoRow>
-              ) : null}
-
               {profile?.note ? (
                 <p className="flex gap-2 rounded-lg bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-900 ring-1 ring-amber-100">
                   <StickyNote className="mt-0.5 size-3.5 shrink-0 text-amber-500" aria-hidden />
@@ -539,7 +450,7 @@ export function CustomerPanel({
                 </p>
               ) : null}
 
-              {!profile || (!profile.phone && !profile.address && !profile.note && profile.tags.length === 0) ? (
+              {!profile || (!profile.phone && !profile.address && !profile.note) ? (
                 <button
                   type="button"
                   onClick={() => setEditing(true)}
