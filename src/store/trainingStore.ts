@@ -3,7 +3,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 
-// Nhật ký đào tạo agent — entries do người dùng thêm lúc chạy (vd "Dạy Agent từ hội thoại" ở Inbox,
+// Nhật ký đào tạo agent — entries do người dùng thêm lúc chạy (vd "Đào tạo Agent bằng hội thoại" ở Inbox,
 // hoặc "Re-train hội thoại" ở Playground). Persist localStorage → lưu thật, sống qua reload (dữ liệu thật),
 // hiển thị xen cùng log tĩnh ở TrainingLog. Component đọc `added` dùng useHydrated để tránh lệch hydrate
 // (server render rỗng, client mới có localStorage) — xem TrainingLog.

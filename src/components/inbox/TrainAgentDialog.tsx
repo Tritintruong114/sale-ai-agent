@@ -44,7 +44,7 @@ function DialogBody({ onSubmit }: { onSubmit: (kind: TrainExampleKind, note: str
   return (
     <DialogContent className="sm:max-w-md">
       <DialogHeader>
-        <DialogTitle>Dạy lại agent</DialogTitle>
+        <DialogTitle>Đào tạo Agent bằng hội thoại</DialogTitle>
       </DialogHeader>
 
       <div className="space-y-4">

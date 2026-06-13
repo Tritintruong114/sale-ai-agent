@@ -12,13 +12,13 @@ import { useTrainingStore, type TrainingEntry, type TrainingMethod } from "@/sto
 import trainingData from "@/data/training.json";
 
 // M6 — tab Đào tạo: nhật ký mỗi lần định nghĩa agent được cập nhật.
-// Nguồn: log tĩnh (mock) + entries người dùng thêm lúc chạy (vd "Dạy Agent từ hội thoại" ở Inbox — useTrainingStore).
+// Nguồn: log tĩnh (mock) + entries người dùng thêm lúc chạy (vd "Đào tạo Agent bằng hội thoại" ở Inbox — useTrainingStore).
 // Bảng theo style chung của prototype (§4.4 surface): wrapper ring + overflow-x, header muted, divide-y.
 
 const METHOD_META: Record<TrainingMethod, { label: string; icon: typeof GraduationCap; className: string }> = {
   playground: { label: "Đào tạo thủ công", icon: FlaskConical, className: "border-violet-200 bg-violet-100 text-violet-700" },
   daily: { label: "Tự học hằng ngày", icon: Sparkles, className: "border-sky-200 bg-sky-100 text-sky-700" },
-  inbox: { label: "Dạy từ hội thoại", icon: GraduationCap, className: "border-indigo-200 bg-indigo-100 text-indigo-700" },
+  inbox: { label: "Từ hội thoại", icon: GraduationCap, className: "border-indigo-200 bg-indigo-100 text-indigo-700" },
 };
 
 const staticLog = trainingData.log as TrainingEntry[];

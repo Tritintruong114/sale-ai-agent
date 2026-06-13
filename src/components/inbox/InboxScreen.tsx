@@ -269,8 +269,8 @@ export function InboxScreen({
   // Panel hồ sơ khách: cố định ở cột phải từ xl trở lên; dưới xl mở dạng overlay.
   const [panelOpen, setPanelOpen] = useState(false); // overlay hồ sơ khách (dưới lg)
   const [infoCollapsed, setInfoCollapsed] = useState(false); // thu gọn cột hồ sơ khách (lg+)
-  const [trainOpen, setTrainOpen] = useState(false); // modal "Dạy lại agent từ hội thoại"
-  // Nhật ký đào tạo (persist localStorage) — ghi lại mỗi lần "Dạy lại agent", chống gửi trùng theo hội thoại.
+  const [trainOpen, setTrainOpen] = useState(false); // modal "Đào tạo Agent bằng hội thoại"
+  // Nhật ký đào tạo (persist localStorage) — ghi lại mỗi lần đào tạo bằng hội thoại, chống gửi trùng theo hội thoại.
   const addTrainingEntry = useTrainingStore((s) => s.addEntry);
   const trainingAdded = useTrainingStore((s) => s.added);
   const hydrated = useHydrated();
@@ -372,7 +372,7 @@ export function InboxScreen({
     }));
   };
 
-  // Số lượt agent đã trả lời trong hội thoại — có lượt mới cho "Dạy lại agent".
+  // Số lượt agent đã trả lời trong hội thoại — có lượt mới cho "Đào tạo Agent bằng hội thoại".
   const agentReplyCount = selected ? selected.messages.filter((m) => m.role === "agent").length : 0;
   // Hội thoại này đã được gửi vào đào tạo chưa (đọc sau hydrate để tránh lệch SSR/localStorage).
   const alreadyTrained = hydrated && selected ? trainingAdded.some((e) => e.conversationId === selected.id) : false;
@@ -729,7 +729,7 @@ export function InboxScreen({
                           )}
                         >
                           <GraduationCap className="size-3.5 text-violet-600" aria-hidden />
-                          Dạy lại agent từ hội thoại này
+                          Đào tạo Agent bằng hội thoại này
                           <ArrowRight className="ml-auto size-3.5 text-muted-foreground" aria-hidden />
                         </button>
                       )
