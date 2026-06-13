@@ -1,12 +1,14 @@
 "use client";
 
 import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
 
-// Nhật ký đào tạo agent — entries do người dùng thêm lúc chạy (vd "Dạy Agent từ hội thoại" ở Inbox).
-// Giữ trong bộ nhớ (không persist) để sống qua điều hướng client, hiển thị xen cùng log tĩnh ở TrainingLog.
-// Không persist → tránh lệch hydrate (server render rỗng); reload sẽ về log tĩnh, đủ cho prototype.
+// Nhật ký đào tạo agent — entries do người dùng thêm lúc chạy (vd "Dạy Agent từ hội thoại" ở Inbox,
+// hoặc "Re-train hội thoại" ở Playground). Persist localStorage → lưu thật, sống qua reload (dữ liệu thật),
+// hiển thị xen cùng log tĩnh ở TrainingLog. Component đọc `added` dùng useHydrated để tránh lệch hydrate
+// (server render rỗng, client mới có localStorage) — xem TrainingLog.
 
-export type TrainingMethod = "manager" | "daily" | "manual" | "conversation";
+export type TrainingMethod = "playground" | "daily";
 
 export type TrainingEntry = {
   id: string;
@@ -26,8 +28,17 @@ type TrainingStore = {
   hasConversation: (conversationId: string) => boolean;
 };
 
-export const useTrainingStore = create<TrainingStore>((set, get) => ({
-  added: [],
-  addEntry: (entry) => set((s) => ({ added: [entry, ...s.added] })),
-  hasConversation: (conversationId) => get().added.some((e) => e.conversationId === conversationId),
-}));
+export const useTrainingStore = create<TrainingStore>()(
+  persist(
+    (set, get) => ({
+      added: [],
+      addEntry: (entry) => set((s) => ({ added: [entry, ...s.added] })),
+      hasConversation: (conversationId) => get().added.some((e) => e.conversationId === conversationId),
+    }),
+    {
+      name: "fanpage-training-log",
+      storage: createJSONStorage(() => localStorage),
+      partialize: (s) => ({ added: s.added }),
+    },
+  ),
+);

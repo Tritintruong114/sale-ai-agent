@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import {
   ArrowRight,
   BarChart3,
+  Bot,
   CheckCircle2,
   CreditCard,
   GraduationCap,
@@ -14,9 +15,11 @@ import {
   RefreshCw,
   ShoppingCart,
   Sparkles,
+  Target,
   TrendingDown,
   TrendingUp,
   Users,
+  Zap,
 } from "lucide-react";
 import { useEffect, useRef, useState, type ComponentType } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,7 +42,7 @@ export type DashboardData = typeof defaultData;
 const TODO_ITEMS = [
   { key: "handoff" as const, label: "Trả lời khách", hint: "Agent đã chuyển hội thoại cho bạn", href: "/inbox", icon: Inbox },
   { key: "bigOrders" as const, label: "Duyệt đơn", hint: "Agent cần bạn xác nhận trước khi chốt", href: "/orders", icon: ShoppingCart },
-  { key: "payments" as const, label: "Duyệt thanh toán", hint: "Agent cần bạn xác nhận trước khi gửi QR", href: "/payments", icon: CreditCard },
+  { key: "payments" as const, label: "Duyệt thanh toán", hint: "Agent cần bạn xác nhận trước khi gửi QR", href: "/orders", icon: CreditCard },
 ];
 
 // Mỗi KPI một icon + tint chip riêng để quét nhanh (màu chỉ hỗ trợ, nhãn vẫn là chính).
@@ -48,6 +51,14 @@ const KPI_META: Record<string, { icon: typeof Inbox; chip: string }> = {
   new_customers: { icon: Users, chip: "bg-violet-100 text-violet-700" },
   closed_orders: { icon: ShoppingCart, chip: "bg-emerald-100 text-emerald-700" },
   revenue: { icon: TrendingUp, chip: "bg-amber-100 text-amber-700" },
+};
+
+// Row "Hiệu suất Agent" — chỉ số xoay quanh chất lượng agent (icon + tint riêng để quét nhanh).
+const AGENT_METRIC_META: Record<string, { icon: typeof Inbox; chip: string }> = {
+  close_rate: { icon: Target, chip: "bg-emerald-100 text-emerald-700" },
+  auto_resolve: { icon: Bot, chip: "bg-sky-100 text-sky-700" },
+  learned_daily: { icon: GraduationCap, chip: "bg-amber-100 text-amber-700" },
+  first_response: { icon: Zap, chip: "bg-violet-100 text-violet-700" },
 };
 
 // Palette phân loại cho "Khách hỏi về gì" — 5 nhóm, mỗi nhóm một hue dịu, luôn kèm nhãn.
@@ -265,7 +276,42 @@ export function DashboardScreen({ data = defaultData, live = false }: { data?: D
         )}
       </section>
 
-      {/* 2 — Báo cáo trong ngày: KPI */}
+      {/* 2 — Hiệu suất Agent: chỉ số xoay quanh chất lượng agent + dải nghiệp vụ đã hoàn thành */}
+      <section className="space-y-3" aria-labelledby="agent-perf-h">
+        <h2 id="agent-perf-h" className="text-lg font-semibold">Hiệu suất Agent</h2>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {data.agentPerformance.metrics.map((m) => {
+            const meta = AGENT_METRIC_META[m.key] ?? { icon: Target, chip: "bg-muted text-muted-foreground" };
+            const Icon = meta.icon;
+            // Hướng "tốt": chỉ số càng cao càng tốt, trừ các chỉ số lowerBetter (dạy lại, thời gian).
+            const lowerBetter = "lowerBetter" in m && m.lowerBetter;
+            const improved = lowerBetter ? m.deltaPct <= 0 : m.deltaPct >= 0;
+            const Delta = m.deltaPct >= 0 ? TrendingUp : TrendingDown;
+            return (
+              <Card key={m.key} size="sm">
+                <CardContent className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground">{m.label}</span>
+                    <span className={cn("flex size-7 items-center justify-center rounded-lg", meta.chip)}>
+                      <Icon className="size-4" aria-hidden />
+                    </span>
+                  </div>
+                  <p className="text-xl font-semibold tabular-nums">
+                    <FlashOnChange value={m.value} active={live} />
+                    <span className="ml-0.5 text-sm font-normal text-muted-foreground">{m.unit}</span>
+                  </p>
+                  <p className={cn("flex items-center gap-1 text-xs font-medium", improved ? "text-emerald-600" : "text-destructive")}>
+                    <Delta className="size-3.5" aria-hidden />
+                    {Math.abs(m.deltaPct)}% <span className="text-muted-foreground">so với hôm qua</span>
+                  </p>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* 3 — Báo cáo trong ngày: KPI */}
       <section className="space-y-3" aria-labelledby="kpi-h">
         <h2 id="kpi-h" className="text-lg font-semibold">Báo cáo trong ngày</h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -302,7 +348,7 @@ export function DashboardScreen({ data = defaultData, live = false }: { data?: D
         </div>
       </section>
 
-      {/* 3 — Ba biểu đồ trong ngày: volume theo giờ · phân loại nhu cầu · sản phẩm bán chạy */}
+      {/* 4 — Ba biểu đồ trong ngày: volume theo giờ · phân loại nhu cầu · sản phẩm bán chạy */}
       <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <Card size="sm">
           <CardHeader>
@@ -442,7 +488,7 @@ export function DashboardScreen({ data = defaultData, live = false }: { data?: D
         </Card>
       </section>
 
-      {/* 4 — Hội thoại đáng chú ý + Card học (G2) */}
+      {/* 5 — Hội thoại đáng chú ý + Card học (G2) */}
       <section className="grid gap-4 lg:grid-cols-3">
         <Card size="sm" className="lg:col-span-2">
           <CardHeader>

@@ -1,9 +1,12 @@
 "use client";
 
-import { CheckCircle2, FileText, GraduationCap, Loader2, MessageSquare, Pencil, Sparkles } from "lucide-react";
+import { useState } from "react";
+import { FlaskConical, GraduationCap, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Pagination } from "@/components/ui/pagination";
 import { AgentAvatar } from "@/components/shared/AgentAvatar";
 import { cn } from "@/lib/utils";
+import { useHydrated } from "@/lib/useHydrated";
 import { useAgentConfig } from "@/store/agentConfigStore";
 import { useTrainingStore, type TrainingEntry, type TrainingMethod } from "@/store/trainingStore";
 import trainingData from "@/data/training.json";
@@ -13,10 +16,8 @@ import trainingData from "@/data/training.json";
 // Bảng theo style chung của prototype (§4.4 surface): wrapper ring + overflow-x, header muted, divide-y.
 
 const METHOD_META: Record<TrainingMethod, { label: string; icon: typeof GraduationCap; className: string }> = {
-  manager: { label: "Train with Manager", icon: GraduationCap, className: "border-violet-200 bg-violet-100 text-violet-700" },
+  playground: { label: "Playground", icon: FlaskConical, className: "border-violet-200 bg-violet-100 text-violet-700" },
   daily: { label: "Tự học hằng ngày", icon: Sparkles, className: "border-sky-200 bg-sky-100 text-sky-700" },
-  manual: { label: "Sửa thủ công", icon: Pencil, className: "border-foreground/15 bg-muted text-muted-foreground" },
-  conversation: { label: "Từ hội thoại", icon: MessageSquare, className: "border-indigo-200 bg-indigo-100 text-indigo-700" },
 };
 
 const staticLog = trainingData.log as TrainingEntry[];
@@ -24,9 +25,25 @@ const staticLog = trainingData.log as TrainingEntry[];
 export function TrainingLog() {
   // Tên + ảnh agent lấy từ nguồn sự thật chung (chọn lúc onboarding hoặc cập nhật ở tab Danh tính).
   const identity = useAgentConfig((s) => s.config.identity);
-  // Entries thêm lúc chạy (mới nhất) đứng trên log tĩnh.
+  // Entries thêm lúc chạy (mới nhất) đứng trên log tĩnh. Persist localStorage nên chỉ ghép sau khi
+  // hydrate (server/lần đầu render rỗng) để tránh lệch hydration.
+  const hydrated = useHydrated();
   const added = useTrainingStore((s) => s.added);
-  const log = [...added, ...staticLog];
+  const log = [...(hydrated ? added : []), ...staticLog];
+
+  // Phân trang (controlled) — theo Pagination dùng chung như các bảng khác (Sản phẩm, Đơn, Thanh toán).
+  // Reset về trang 1 khi tập log đổi (thêm entry / đổi cỡ trang), kẹp khi vượt biên — pattern chỉnh-state-lúc-render.
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(5);
+  const pageCount = Math.max(1, Math.ceil(log.length / pageSize));
+  const sig = `${log.length}|${pageSize}`;
+  const [prevSig, setPrevSig] = useState(sig);
+  if (sig !== prevSig) {
+    setPrevSig(sig);
+    setPage(1);
+  }
+  const safePage = Math.min(page, pageCount);
+  const paged = log.slice((safePage - 1) * pageSize, safePage * pageSize);
 
   if (log.length === 0) {
     return (
@@ -43,21 +60,21 @@ export function TrainingLog() {
   }
 
   return (
-    <div className="scrollbar-hide overflow-x-auto rounded-lg ring-1 ring-foreground/10">
-      <table className="w-full min-w-[78rem] border-collapse text-left">
-        <caption className="sr-only">Nhật ký các lần đào tạo agent — agent, thời gian, hình thức, phạm vi, kết quả và trạng thái.</caption>
+    <div className="flex h-[calc(100dvh-7rem)] min-h-[34rem] flex-col overflow-hidden rounded-xl bg-card ring-1 ring-foreground/10">
+      {/* Thân bảng — cuộn dọc/ngang, header dính đỉnh khi cuộn. */}
+      <div className="scrollbar-hide min-h-0 flex-1 overflow-auto">
+      <table className="w-full min-w-[51rem] border-collapse text-left">
+        <caption className="sr-only">Nhật ký các lần đào tạo agent — agent, thời gian, hình thức và nội dung.</caption>
         <thead>
-          <tr className="border-b bg-muted/40 [&_th]:h-9 [&_th]:px-3 [&_th]:align-middle [&_th]:text-[11px] [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-muted-foreground">
+          <tr className="sticky top-0 z-10 border-b bg-muted [&_th]:h-9 [&_th]:px-3 [&_th]:align-middle [&_th]:text-[11px] [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-muted-foreground">
             <th scope="col" className="w-52">Đào tạo agent</th>
             <th scope="col" className="w-36">Thời gian</th>
             <th scope="col" className="w-44">Hình thức</th>
-            <th scope="col" className="w-72">Nội dung</th>
-            <th scope="col" className="w-80">File cập nhật</th>
-            <th scope="col" className="w-28">Trạng thái</th>
+            <th scope="col" className="w-72">Nội dung đào tạo</th>
           </tr>
         </thead>
         <tbody className="divide-y">
-          {log.map((e) => {
+          {paged.map((e) => {
             const meta = METHOD_META[e.method];
             const MethodIcon = meta.icon;
             return (
@@ -74,40 +91,27 @@ export function TrainingLog() {
                     <MethodIcon className="size-3" aria-hidden />
                     {meta.label}
                   </Badge>
-                  <p className="mt-1 text-[11px] text-muted-foreground">{e.by}</p>
                 </td>
                 <td>
                   <p className="text-sm">{e.summary}</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">Phạm vi: {e.scope}</p>
-                </td>
-                <td>
-                  <div className="flex flex-wrap gap-1">
-                    {e.files.map((f) => (
-                      <code key={f} className="inline-flex items-center gap-1 rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
-                        <FileText className="size-3" aria-hidden />
-                        {f}
-                      </code>
-                    ))}
-                  </div>
-                </td>
-                <td>
-                  {e.status === "done" ? (
-                    <Badge className="gap-1 border-emerald-200 bg-emerald-100 text-emerald-700">
-                      <CheckCircle2 className="size-3" aria-hidden />
-                      Hoàn tất
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline" className="gap-1 text-amber-600">
-                      <Loader2 className="size-3 animate-spin" aria-hidden />
-                      Đang đào tạo
-                    </Badge>
-                  )}
                 </td>
               </tr>
             );
           })}
         </tbody>
       </table>
+      </div>
+      {/* Footer phân trang — dính đáy card (không cuộn mất), như các bảng khác. */}
+      <div className="shrink-0 border-t bg-card px-4 py-2.5">
+        <Pagination
+          page={safePage}
+          pageSize={pageSize}
+          total={log.length}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+          unitLabel="lần đào tạo"
+        />
+      </div>
     </div>
   );
 }

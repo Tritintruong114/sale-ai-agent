@@ -1,4 +1,4 @@
-import { CircleDot, LayoutGrid, List, Search, Share2, ShieldQuestion, X } from "lucide-react";
+import { CircleDot, LayoutGrid, List, Search, Share2, ShieldQuestion, Wallet, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
@@ -12,13 +12,17 @@ import {
   type Channel,
   type OrderStatus,
 } from "./meta";
+import { PAY_STATE_META, PAY_STATE_ORDER, type PayState } from "@/components/payments/meta";
 
 export type View = "board" | "list";
 
 // Tạm ẩn chế độ "Bảng cột" (Kanban) — chỉ còn Danh sách. Bật lại: đổi cờ này thành true.
 const BOARD_VIEW_ENABLED = false;
+// Tạm ẩn bộ lọc trạng thái đơn — đi kèm việc ẩn cột "Xử lý" (xem OrderList). Bật lại: đổi cờ này thành true.
+const STATUS_FILTER_ENABLED = false;
 export type StatusFilter = OrderStatus | "all";
 export type ApprovalFilter = Approval | "all";
+export type PayFilter = PayState | "all";
 export type ChannelFilter = Channel | "all";
 
 // Trigger lọc dạng icon (mirror Inbox): chevron mảnh & nhạt, nền tô nhẹ khi khác mặc định.
@@ -31,6 +35,8 @@ export function OrdersToolbar({
   onStatus,
   approval,
   onApproval,
+  pay,
+  onPay,
   channel,
   onChannel,
   view,
@@ -45,6 +51,8 @@ export function OrdersToolbar({
   onStatus: (v: StatusFilter) => void;
   approval: ApprovalFilter;
   onApproval: (v: ApprovalFilter) => void;
+  pay: PayFilter;
+  onPay: (v: PayFilter) => void;
   channel: ChannelFilter;
   onChannel: (v: ChannelFilter) => void;
   view: View;
@@ -77,7 +85,8 @@ export function OrdersToolbar({
         ) : null}
       </div>
 
-      {/* Lọc trạng thái đơn */}
+      {/* Lọc trạng thái đơn — ẩn cùng cột "Xử lý" (xem OrderList). Bật lại: STATUS_FILTER_ENABLED = true. */}
+      {STATUS_FILTER_ENABLED ? (
       <Select value={status} onValueChange={(v) => onStatus(v as StatusFilter)}>
         <SelectTrigger
           size="sm"
@@ -113,6 +122,7 @@ export function OrdersToolbar({
           ))}
         </SelectContent>
       </Select>
+      ) : null}
 
       {/* Lọc trạng thái duyệt */}
       <Select value={approval} onValueChange={(v) => onApproval(v as ApprovalFilter)}>
@@ -139,6 +149,42 @@ export function OrdersToolbar({
                 </span>
               )}
               {a.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      {/* Lọc trạng thái thu tiền — thay cho màn Giao dịch cũ (đối soát theo trạng thái thu). */}
+      <Select value={pay} onValueChange={(v) => onPay(v as PayFilter)}>
+        <SelectTrigger
+          size="sm"
+          className={cn(FILTER_TRIGGER, pay !== "all" && PAY_STATE_META[pay].tint)}
+          aria-label="Lọc theo trạng thái thu tiền"
+          title={`Thu tiền: ${pay === "all" ? "Mọi trạng thái" : PAY_STATE_META[pay].label}`}
+        >
+          {pay === "all" ? (
+            <Wallet className="size-4 text-muted-foreground" aria-hidden />
+          ) : (
+            <span className="flex size-4 items-center justify-center" aria-hidden>
+              <span className={cn("size-2.5 rounded-full", PAY_STATE_META[pay].dot)} />
+            </span>
+          )}
+        </SelectTrigger>
+        <SelectContent className="min-w-48">
+          <div className="px-1.5 pb-1 pt-0.5 text-[11px] font-medium text-muted-foreground">Trạng thái thu tiền</div>
+          <SelectItem value="all">
+            <Wallet className="size-4 text-muted-foreground" aria-hidden />
+            Mọi trạng thái
+          </SelectItem>
+          {PAY_STATE_ORDER.map((s) => (
+            <SelectItem key={s} value={s}>
+              <span className="flex size-4 items-center justify-center" aria-hidden>
+                {(() => {
+                  const Icon = PAY_STATE_META[s].icon;
+                  return <Icon className="size-3.5" />;
+                })()}
+              </span>
+              {PAY_STATE_META[s].label}
             </SelectItem>
           ))}
         </SelectContent>

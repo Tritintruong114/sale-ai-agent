@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { type Tour, TourProvider, useTour } from "@/components/ui/tour";
 import { useUiStore } from "@/store/uiStore";
 
-// Tour hướng dẫn sau onboarding — đi qua 7 màn theo thứ tự SideNav.
+// Tour hướng dẫn sau onboarding — đi qua 7 mục theo đúng thứ tự SideNav.
 // Mỗi bước spotlight một mục trên SideNav (luôn hiển thị ở mọi trang) qua data-tour-step-id,
 // nextRoute/previousRoute đổi nội dung trang phía sau. Nhãn nút + nội dung tiếng Việt.
 const GUIDE_TOUR: Tour = {
@@ -49,16 +49,27 @@ const GUIDE_TOUR: Tour = {
       side: "right",
       previousRoute: "/orders",
       previousLabel: "Quay lại",
-      nextRoute: "/payments",
+      nextRoute: "/agent-config",
       nextLabel: "Tiếp",
     },
     {
-      id: "nav-payments",
-      title: "Giao dịch",
+      id: "nav-agent",
+      title: "Cấu hình Agent",
       content:
-        "Đây là nơi bạn theo dõi giao dịch theo từng đơn.",
+        "Đây là nơi bạn quyết định agent là ai và làm việc ra sao: tên gọi, cách xưng hô với khách, khi nào bàn giao cho bạn.",
       side: "right",
       previousRoute: "/products",
+      previousLabel: "Quay lại",
+      nextRoute: "/playground",
+      nextLabel: "Tiếp",
+    },
+    {
+      id: "nav-playground",
+      title: "Đào tạo Agent",
+      content:
+        "Nơi bạn thử chat với agent và liên tục đào tạo lại agent",
+      side: "right",
+      previousRoute: "/agent-config",
       previousLabel: "Quay lại",
       nextRoute: "/shop-info",
       nextLabel: "Tiếp",
@@ -69,18 +80,7 @@ const GUIDE_TOUR: Tour = {
       content:
         "Nơi bạn cập nhật thông tin shop: giới thiệu, chính sách và giờ mở cửa. Agent dựa vào thông tin này để tư vấn và trả lời khách hàng",
       side: "right",
-      previousRoute: "/payments",
-      previousLabel: "Quay lại",
-      nextRoute: "/agent-config",
-      nextLabel: "Tiếp",
-    },
-    {
-      id: "nav-agent",
-      title: "Cấu hình Agent",
-      content:
-        "Đây là nơi bạn quyết định agent là ai và làm việc ra sao: tên gọi, cách xưng hô với khách, khi nào nhường lại cho bạn, và duyệt điều agent học được mỗi ngày.",
-      side: "right",
-      previousRoute: "/shop-info",
+      previousRoute: "/playground",
       previousLabel: "Quay lại",
       nextLabel: "Xong",
     },

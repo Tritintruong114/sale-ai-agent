@@ -5,6 +5,14 @@ import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useUiStore } from "@/store/uiStore";
 import raw from "@/data/orders.json";
+import paymentsRaw from "@/data/payments.json";
+import {
+  payState,
+  toPayment,
+  type PayState,
+  type Payment,
+  type PaymentSeed,
+} from "@/components/payments/meta";
 import { ApprovalQueue } from "./ApprovalQueue";
 import { OrderBoard } from "./OrderBoard";
 import { OrderDetailPanel } from "./OrderDetailPanel";
@@ -22,6 +30,7 @@ import {
   OrdersToolbar,
   type ApprovalFilter,
   type ChannelFilter,
+  type PayFilter,
   type StatusFilter,
   type View,
 } from "./OrdersToolbar";
@@ -29,16 +38,25 @@ import { NEXT_STATUS, ORDERS_METRICS_ENABLED, type Approval, type Order } from "
 
 // M2 Quản lý đơn — lede + KPI + zone duyệt HITL + lọc/tìm + Board/List + panel chi tiết docked.
 // Bấm đơn → mở panel; "Xem hội thoại" → X1.
+// Thu tiền đã gộp vào đây (màn Giao dịch cũ scope out): mỗi đơn mang theo 1 khoản thu (khoá orderId),
+// duyệt-gửi-QR / đánh dấu đã nhận tiền và diễn biến QR sống trong panel đơn.
 
 const INITIAL = raw.orders as Order[];
+
+// Khoản thu khởi tạo theo orderId — runtime (đã gắn gate). Sống thành state để duyệt/đánh dấu ngay trong panel đơn.
+const INITIAL_PAYMENTS: Record<string, Payment> = Object.fromEntries(
+  (paymentsRaw.queue as PaymentSeed[]).map((s) => [s.orderId, toPayment(s)]),
+);
 
 export function OrdersScreen({ highlightId, initialTab }: { highlightId?: string; initialTab?: string }) {
   const router = useRouter();
 
   const [orders, setOrders] = useState<Order[]>(INITIAL);
+  const [payments, setPayments] = useState<Record<string, Payment>>(INITIAL_PAYMENTS);
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<StatusFilter>("all");
   const [approval, setApproval] = useState<ApprovalFilter>("all");
+  const [pay, setPay] = useState<PayFilter>("all");
   const [channel, setChannel] = useState<ChannelFilter>("all");
   const [view, setView] = useState<View>("list"); // Bảng cột (Kanban) tạm ẩn — mặc định Danh sách
   const [listPage, setListPage] = useState(1); // phân trang chế độ Danh sách (1-based)
@@ -84,6 +102,18 @@ export function OrdersScreen({ highlightId, initialTab }: { highlightId?: string
   const changeStatus = (id: string, status: Order["status"]) =>
     setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, status } : o)));
 
+  // Thu tiền theo đơn (khoá orderId) — duyệt gửi QR / từ chối / đánh dấu đã nhận tiền ngay trong panel đơn.
+  const patchPayment = (orderId: string, next: Partial<Payment>) =>
+    setPayments((prev) => (prev[orderId] ? { ...prev, [orderId]: { ...prev[orderId], ...next } } : prev));
+  const approvePayment = (orderId: string) => patchPayment(orderId, { gate: "approved" });
+  const rejectPayment = (orderId: string) => patchPayment(orderId, { gate: "rejected" });
+  const markPaid = (orderId: string) => patchPayment(orderId, { status: "paid" });
+  // Trạng thái thu của đơn (null khi đơn chưa sinh khoản thu) — cho chip/lọc, cùng thang màn Thanh toán cũ.
+  const payStateOf = (orderId: string): PayState | null => {
+    const p = payments[orderId];
+    return p ? payState(p) : null;
+  };
+
   const statusCounts = useMemo(() => {
     const m: Record<string, number> = { all: orders.length };
     for (const o of orders) m[o.status] = (m[o.status] ?? 0) + 1;
@@ -92,7 +122,8 @@ export function OrdersScreen({ highlightId, initialTab }: { highlightId?: string
 
   const pending = useMemo(() => orders.filter((o) => o.approval === "pending"), [orders]);
 
-  const hasFilters = query.trim() !== "" || status !== "all" || approval !== "all" || channel !== "all";
+  const hasFilters =
+    query.trim() !== "" || status !== "all" || approval !== "all" || pay !== "all" || channel !== "all";
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -100,12 +131,14 @@ export function OrdersScreen({ highlightId, initialTab }: { highlightId?: string
       .filter((o) => {
         if (status !== "all" && o.status !== status) return false;
         if (approval !== "all" && o.approval !== approval) return false;
+        if (pay !== "all" && payStateOf(o.id) !== pay) return false;
         if (channel !== "all" && o.channel !== channel) return false;
         if (!q) return true;
         return o.customerName.toLowerCase().includes(q) || o.id.toLowerCase().includes(q);
       })
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  }, [orders, query, status, approval, channel]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orders, payments, query, status, approval, pay, channel]);
 
   // Danh sách: sắp xếp toàn bộ tập đã lọc theo cột đang chọn TRƯỚC khi phân trang (sort toàn cục).
   const listSorted = useMemo(
@@ -125,7 +158,7 @@ export function OrdersScreen({ highlightId, initialTab }: { highlightId?: string
   const listPageCount = Math.max(1, Math.ceil(listSorted.length / listPageSize));
   useEffect(() => {
     setListPage(1);
-  }, [query, status, approval, channel, listPageSize, listSortKey, listSortDir]);
+  }, [query, status, approval, pay, channel, listPageSize, listSortKey, listSortDir]);
   const safeListPage = Math.min(listPage, listPageCount);
   const pagedVisible = useMemo(
     () => listSorted.slice((safeListPage - 1) * listPageSize, safeListPage * listPageSize),
@@ -138,12 +171,11 @@ export function OrdersScreen({ highlightId, initialTab }: { highlightId?: string
     setQuery("");
     setStatus("all");
     setApproval("all");
+    setPay("all");
     setChannel("all");
   };
 
   const viewConversation = (conversationId: string) => router.push(`/inbox?c=${conversationId}`);
-  // Mở khoản thu liên kết bên màn Thanh toán (tab Thu tiền tự bật do có ?p=).
-  const viewPayment = (paymentId: string) => router.push(`/payments?p=${paymentId}`);
 
   return (
     // Tab Chỉ số: trang dữ liệu căn giữa max-w-6xl (§6.1), cuộn bình thường. Tab Quản lý: full-width
@@ -216,6 +248,8 @@ export function OrdersScreen({ highlightId, initialTab }: { highlightId?: string
                   onStatus={setStatus}
                   approval={approval}
                   onApproval={setApproval}
+                  pay={pay}
+                  onPay={setPay}
                   channel={channel}
                   onChannel={setChannel}
                   view={view}
@@ -267,11 +301,13 @@ export function OrdersScreen({ highlightId, initialTab }: { highlightId?: string
               <div className="min-h-0 flex-1 overflow-hidden rounded-xl bg-card ring-1 ring-foreground/10 lg:h-full lg:flex-none">
                 <OrderDetailPanel
                   order={selected}
+                  payment={payments[selected.id] ?? null}
                   onClose={() => setSelectedId(null)}
                   onDecide={decide}
-                  onAdvance={advance}
                   onViewConversation={viewConversation}
-                  onViewPayment={viewPayment}
+                  onApprovePayment={approvePayment}
+                  onRejectPayment={rejectPayment}
+                  onMarkPaid={markPaid}
                 />
               </div>
             ) : null}

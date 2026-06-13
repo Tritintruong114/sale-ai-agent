@@ -1,6 +1,7 @@
 import { GraduationCap, KeyRound, ListChecks, MessageSquareWarning, UserRound, type LucideIcon } from "lucide-react";
 
 // Nhóm cấu hình M6 — nguồn chung cho tab in-page trong AgentConfigScreen.
+// Playground đã tách thành màn riêng (/playground, "Đào tạo Agent") — không còn là tab ở đây.
 export type AgentConfigTab = "learning" | "training" | "handoff" | "identity" | "byok" | "notify";
 
 // Tab Khoá API (BYOK) đang tạm ẩn — bật lại bằng cờ này.

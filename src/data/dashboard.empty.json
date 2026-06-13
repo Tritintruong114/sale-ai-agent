@@ -22,6 +22,9 @@
   "hourlyVolume": [],
   "intentBreakdown": [],
   "topProducts": [],
+  "agentPerformance": {
+    "metrics": []
+  },
   "learnedToday": 0,
   "comparison": {
     "responseTime": { "withAgent": "—", "manual": "—" },

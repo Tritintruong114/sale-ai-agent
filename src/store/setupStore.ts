@@ -8,6 +8,9 @@ type SetupState = {
   // Cổng thanh toán đã nối (mock OAuth). Mặc định chưa nối cổng nào — để bước "Kết nối" là việc thật.
   gateways: Record<string, boolean>;
   setGateway: (key: string, connected: boolean) => void;
+  // Hệ thống CRM / quản lý bán hàng đã nối (mock OAuth) — KiotViet, Sapo, Haravan…
+  crms: Record<string, boolean>;
+  setCrm: (key: string, connected: boolean) => void;
   // Đã chat thử với agent ít nhất một lần.
   agentTested: boolean;
   markAgentTested: () => void;
@@ -24,12 +27,16 @@ type SetupState = {
 };
 
 const INITIAL_GATEWAYS: Record<string, boolean> = { sepay: false, vnpay: false, momo: false };
+// Mặc định nối sẵn KiotViet để demo kết nối CRM (đơn hiện mã đơn ngoài ở mục Hoạt động). Đổi/ngắt ở /crm.
+const INITIAL_CRMS: Record<string, boolean> = { kiotviet: true, sapo: false, haravan: false };
 
 export const useSetupStore = create<SetupState>()(
   persist(
     (set) => ({
       gateways: { ...INITIAL_GATEWAYS },
       setGateway: (key, connected) => set((s) => ({ gateways: { ...s.gateways, [key]: connected } })),
+      crms: { ...INITIAL_CRMS },
+      setCrm: (key, connected) => set((s) => ({ crms: { ...s.crms, [key]: connected } })),
       agentTested: false,
       markAgentTested: () => set({ agentTested: true }),
       dismissed: false,
@@ -37,8 +44,22 @@ export const useSetupStore = create<SetupState>()(
       welcomePending: false,
       showWelcome: () => set({ welcomePending: true }),
       dismissWelcome: () => set({ welcomePending: false }),
-      reset: () => set({ gateways: { ...INITIAL_GATEWAYS }, agentTested: false, dismissed: false, welcomePending: false }),
+      reset: () =>
+        set({
+          gateways: { ...INITIAL_GATEWAYS },
+          crms: { ...INITIAL_CRMS },
+          agentTested: false,
+          dismissed: false,
+          welcomePending: false,
+        }),
     }),
-    { name: "fanpage-setup-state", storage: createJSONStorage(() => localStorage) },
+    {
+      name: "fanpage-setup-state",
+      // v1: bật sẵn KiotViet cho localStorage cũ (trước đó crms toàn false) để demo CRM hiện ngay.
+      version: 1,
+      migrate: (persisted, from) =>
+        from < 1 ? { ...(persisted as SetupState), crms: { ...INITIAL_CRMS } } : (persisted as SetupState),
+      storage: createJSONStorage(() => localStorage),
+    },
   ),
 );

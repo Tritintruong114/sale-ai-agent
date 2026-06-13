@@ -8,7 +8,6 @@ import {
   Bot,
   Check,
   CheckCircle2,
-  Clock,
   Link2,
   MessageSquare,
   PackageSearch,
@@ -254,10 +253,6 @@ export function OnboardingWizard() {
   return (
     <Card className="w-full max-w-2xl">
       <CardHeader className="space-y-4">
-        <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-          <Clock className="size-4" aria-hidden />4 bước · khoảng 2 phút
-        </div>
-
         <Stepper steps={stepperItems} current={index} onStepClick={(c) => goTo(c as StepCode)} />
 
         <StepHeader icon={StepIcon} title={step.title} benefit={step.benefit} />

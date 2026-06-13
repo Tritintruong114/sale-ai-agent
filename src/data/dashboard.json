@@ -43,6 +43,14 @@
     { "productId": "fr-nho-queen", "name": "Nho Queen", "units": 5, "revenue": 425000 },
     { "productId": "mam-mam-thanh-tan", "name": "Mâm thanh tân", "units": 1, "revenue": 450000 }
   ],
+  "agentPerformance": {
+    "metrics": [
+      { "key": "close_rate", "label": "Tỉ lệ chốt đơn", "value": 24, "unit": "%", "deltaPct": 6 },
+      { "key": "auto_resolve", "label": "Agent tự xử lý", "value": 82, "unit": "%", "deltaPct": 4 },
+      { "key": "learned_daily", "label": "Học mỗi ngày", "value": 5, "unit": "điều", "deltaPct": 25 },
+      { "key": "first_response", "label": "Phản hồi đầu", "value": 3, "unit": "giây", "deltaPct": -38, "lowerBetter": true }
+    ]
+  },
   "learnedToday": 2,
   "comparison": {
     "responseTime": { "withAgent": "tức thì", "manual": "~25 phút" },

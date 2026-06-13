@@ -1,11 +1,11 @@
 {
-  "_note": "Nhật ký đào tạo agent (M6 — tab Đào tạo). Mỗi dòng = một lần đào tạo: Train with Manager (re-train định nghĩa), Tự học hằng ngày (áp insight đã duyệt), hoặc Sửa thủ công file định nghĩa. Mock tất định — KHÔNG phải nguồn sự thật, chỉ hiển thị. method: manager | daily | manual. status: done | running.",
+  "_note": "Nhật ký đào tạo agent (màn Đào tạo Agent — /playground, tab Lịch sử). Mỗi dòng = một lần đào tạo. Mock tất định — KHÔNG phải nguồn sự thật, chỉ hiển thị. method: playground | daily. status: done | running.",
   "log": [
     {
       "id": "tr-006",
       "at": "2026-06-10T09:24:00",
-      "method": "manager",
-      "by": "Manager Agent",
+      "method": "playground",
+      "by": "Playground",
       "scope": "Toàn bộ định nghĩa",
       "summary": "Điều chỉnh giọng trẻ trung hơn, bổ sung kiến thức 3 sản phẩm mới.",
       "files": ["VIBE-TONE.md", "CORPUS.md", "IDENTITY.md"],
@@ -22,16 +22,6 @@
       "status": "done"
     },
     {
-      "id": "tr-004",
-      "at": "2026-06-09T15:12:00",
-      "method": "manual",
-      "by": "Chủ shop",
-      "scope": "RULES.md",
-      "summary": "Bổ sung nguyên tắc bàn giao cho chủ shop khi khách hỏi ngoài kịch bản.",
-      "files": ["RULES.md"],
-      "status": "done"
-    },
-    {
       "id": "tr-003",
       "at": "2026-06-08T22:00:00",
       "method": "daily",
@@ -44,8 +34,8 @@
     {
       "id": "tr-002",
       "at": "2026-06-06T10:48:00",
-      "method": "manager",
-      "by": "Manager Agent",
+      "method": "playground",
+      "by": "Playground",
       "scope": "VIBE-TONE.md",
       "summary": "Tinh chỉnh lời chào và cách xưng hô theo phản hồi khách.",
       "files": ["VIBE-TONE.md"],
@@ -54,8 +44,8 @@
     {
       "id": "tr-001",
       "at": "2026-06-03T14:05:00",
-      "method": "manager",
-      "by": "Manager Agent",
+      "method": "playground",
+      "by": "Playground",
       "scope": "Toàn bộ định nghĩa",
       "summary": "Đào tạo lần đầu — thiết lập tính cách, kỹ năng và nguyên tắc bàn giao.",
       "files": ["SOUL.md", "VIBE-TONE.md", "CORPUS.md", "RULES.md", "IDENTITY.md"],

@@ -6,6 +6,7 @@ import { useSetupStore } from "@/store/setupStore";
 // "suggestHandoff" = Manager gợi ý câu khách nói cho một tình huống bàn giao (M6, kèm nút Apply).
 export type AgentChatScenario =
   | { kind: "payment"; nonce: number }
+  | { kind: "crm"; nonce: number; crmName: string }
   | { kind: "suggestHandoff"; nonce: number; ruleKey: string; label: string; description?: string };
 
 // Trạng thái khung ứng dụng — SideNav: thu gọn trên desktop + drawer trên mobile.
@@ -32,6 +33,8 @@ type UiState = {
   // nonce tăng mỗi lần kích để AgentChatContent nhận biết lần chạy mới.
   agentChatScenario: AgentChatScenario | null;
   startAgentChatTest: (kind: "payment") => void;
+  // Mở chat + Manager Agent chạy kiểm tra kết nối CRM (gọi tools đại diện rồi trả dữ liệu mẫu).
+  startCrmTest: (crmName: string) => void;
   // Mở chat + chạy kịch bản Manager gợi ý câu khách nói cho một tình huống bàn giao (M6).
   startHandoffSuggest: (payload: { ruleKey: string; label: string; description?: string }) => void;
   // Tab màn Quản lý đơn — đặt trên topbar (M2): "metrics" = chỉ số, "manage" = quản lý.
@@ -50,6 +53,9 @@ type UiState = {
   // Tab màn Thông tin shop — đặt trên topbar: "info" = hồ sơ shop, "channels" = kênh kết nối.
   shopTab: "info" | "channels";
   setShopTab: (tab: "info" | "channels") => void;
+  // Tab màn Đào tạo Agent (/playground) — đặt trên topbar: "train" = sân thử, "history" = lịch sử đào tạo.
+  playgroundTab: "train" | "history";
+  setPlaygroundTab: (tab: "train" | "history") => void;
   // Tour hướng dẫn: id tour đang chờ chạy (đặt từ Onboarding / nút "Xem hướng dẫn"),
   // TourLauncher trong AppTour đọc cờ này rồi gọi start() và xoá cờ.
   pendingTourId: string | null;
@@ -80,6 +86,13 @@ export const useUiStore = create<UiState>((set) => ({
     useSetupStore.getState().markAgentTested();
     set((s) => ({ agentChatOpen: true, agentChatScenario: { kind, nonce: (s.agentChatScenario?.nonce ?? 0) + 1 } }));
   },
+  startCrmTest: (crmName) => {
+    useSetupStore.getState().markAgentTested();
+    set((s) => ({
+      agentChatOpen: true,
+      agentChatScenario: { kind: "crm", nonce: (s.agentChatScenario?.nonce ?? 0) + 1, crmName },
+    }));
+  },
   startHandoffSuggest: (payload) =>
     set((s) => ({
       agentChatOpen: true,
@@ -95,6 +108,8 @@ export const useUiStore = create<UiState>((set) => ({
   setAgentConfigTab: (tab) => set({ agentConfigTab: tab }),
   shopTab: "info",
   setShopTab: (tab) => set({ shopTab: tab }),
+  playgroundTab: "train",
+  setPlaygroundTab: (tab) => set({ playgroundTab: tab }),
   pendingTourId: null,
   requestTour: (id) => set({ pendingTourId: id }),
   clearPendingTour: () => set({ pendingTourId: null }),

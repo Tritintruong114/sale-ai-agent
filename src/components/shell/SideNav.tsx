@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { useUiStore } from "@/store/uiStore";
 import { useSetupStore } from "@/store/setupStore";
 import { PrototypeSwitcher } from "./PrototypeSwitcher";
-import { NAV_GROUPS, type NavItem } from "./nav";
+import { NAV_GROUPS, isNavItemActive, type NavItem } from "./nav";
 
 // §2 design.md — SideNav: điều hướng chính dạng dọc bên trái.
 // Desktop: cột cố định, thu gọn được (useUiStore.collapsed → icon-only).
@@ -78,8 +78,7 @@ export function SideNav() {
   const requestTour = useUiStore((s) => s.requestTour);
   const resetSetup = useSetupStore((s) => s.reset);
 
-  const isActive = (href: string) =>
-    href === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(href);
+  const isActive = (item: NavItem) => isNavItemActive(item, pathname);
 
   const closeMobile = () => setMobileOpen(false);
 
@@ -151,7 +150,7 @@ export function SideNav() {
             ) : null}
             <div className="space-y-1">
               {group.items.map((item) => (
-                <NavLink key={item.href} item={item} active={isActive(item.href)} collapsed={collapsed} onNavigate={closeMobile} />
+                <NavLink key={item.href} item={item} active={isActive(item)} collapsed={collapsed} onNavigate={closeMobile} />
               ))}
             </div>
           </div>

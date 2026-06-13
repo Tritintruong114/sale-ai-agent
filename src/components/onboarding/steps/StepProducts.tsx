@@ -317,7 +317,7 @@ export function StepProducts({ draft, update }: StepProps) {
             rows={5}
             disabled={scanning}
           />
-          <Button variant="outline" size="lg" onClick={runImport} disabled={scanning || !raw.trim()}>
+          <Button size="lg" onClick={runImport} disabled={scanning || !raw.trim()}>
             {scanning ? (
               <Loader2 className="size-4 motion-safe:animate-spin" aria-hidden />
             ) : (

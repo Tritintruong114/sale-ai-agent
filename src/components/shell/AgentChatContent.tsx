@@ -10,6 +10,7 @@ import { useUiStore, type AgentChatScenario } from "@/store/uiStore";
 import { useAgentConfig } from "@/store/agentConfigStore";
 import { buildRetrainFlow, RETRAIN_TRIGGER, retrainCtaLabel, type RetrainTurn } from "@/data/retrainFlow";
 import { buildPaymentTestFlow, PAYMENT_TEST_MESSAGE } from "@/data/paymentTestFlow";
+import { buildCrmTestFlow } from "@/data/crmTestFlow";
 import { buildSuggestFlow } from "@/data/suggestFlow";
 import type { ApplyAction } from "@/components/shared/chat/types";
 import type { ComposerModel } from "@/components/shared/chat/Composer";
@@ -116,7 +117,8 @@ export function AgentChatContent({ headerActions }: AgentChatContentProps) {
   // + tự nhận prevAgentId để render-sync không reset đè, rồi đánh dấu chờ chạy. Việc chạy (có timer) để effect.
   if (scenario && scenario.nonce !== seenScenarioNonce) {
     setSeenScenarioNonce(scenario.nonce);
-    const target = scenario.kind === "suggestHandoff" ? "manager" : "assistant";
+    // payment → trợ lý (đóng vai khách chốt đơn); crm & gợi ý bàn giao → Manager (việc điều phối/tích hợp).
+    const target = scenario.kind === "payment" ? "assistant" : "manager";
     setAgentId(target);
     setPrevAgentId(target);
     setPendingScenario(scenario);
@@ -191,6 +193,20 @@ export function AgentChatContent({ headerActions }: AgentChatContentProps) {
     playTurn(turns[0], turns.length === 1);
   };
 
+  // Chạy kịch bản "Kiểm tra với Agent" cho CRM: Manager nhận yêu cầu rồi gọi tools đại diện + trả dữ liệu mẫu.
+  const startCrmTest = (crmName: string) => {
+    const turns = buildCrmTestFlow(crmName, pronoun);
+    setRetrainTurns(turns);
+    setRetrainIndex(0);
+    setAwaitingAnswer(false);
+    setStep(0);
+    setMessages([
+      { id: nextId(), role: "agent", text: greetingFor("manager") },
+      { id: nextId(), role: "customer", text: `Kiểm tra kết nối ${crmName} giúp mình với.` },
+    ]);
+    playTurn(turns[0], turns.length === 1);
+  };
+
   // Chạy kịch bản "Gợi ý câu khách nói": Manager nhận yêu cầu rồi đề xuất câu mẫu kèm nút Apply cho tình huống đó.
   const runHandoffSuggest = (sc: Extract<AgentChatScenario, { kind: "suggestHandoff" }>) => {
     const turns = buildSuggestFlow({ ruleKey: sc.ruleKey, label: sc.label, description: sc.description, agentName });
@@ -212,6 +228,7 @@ export function AgentChatContent({ headerActions }: AgentChatContentProps) {
     const t = setTimeout(() => {
       setPendingScenario(null);
       if (sc.kind === "payment") startPaymentTest();
+      else if (sc.kind === "crm") startCrmTest(sc.crmName);
       else runHandoffSuggest(sc);
     }, 0);
     return () => clearTimeout(t);

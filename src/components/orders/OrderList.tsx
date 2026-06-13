@@ -22,6 +22,9 @@ import {
 // Hai trục trạng thái tách bạch: "Xử lý" = vòng đời xử lý đơn (đổi tại chỗ), "Tư vấn" = phễu hội thoại
 // (đọc, join từ conversations.json). Duyệt/thanh toán/giao là chi tiết — xem ở panel, không nhồi vào bảng.
 
+// Tạm ẩn cột "Xử lý" (đổi trạng thái đơn tại chỗ) — bật lại: đổi cờ này thành true.
+const STATUS_COLUMN_ENABLED = false;
+
 export type OrderSortKey = "customer" | "createdAt" | "total" | "status";
 export type OrderSortDir = "asc" | "desc";
 
@@ -54,7 +57,9 @@ const COLUMNS: { key: OrderSortKey; label: string; align: "left" | "right"; clas
   { key: "customer", label: "Khách hàng", align: "left" },
   { key: "createdAt", label: "Ngày tạo", align: "left" },
   { key: "total", label: "Giá trị", align: "right" },
-  { key: "status", label: "Xử lý", align: "left" },
+  ...(STATUS_COLUMN_ENABLED
+    ? [{ key: "status" as const, label: "Xử lý", align: "left" as const }]
+    : []),
 ];
 
 // Đổi trạng thái đơn hàng (stage) ngay trong bảng — dropdown 3 mốc Mới/Đang xử lý/Hoàn tất.
@@ -236,10 +241,12 @@ export function OrderList({
                 {/* Giá trị — canh phải */}
                 <td className="text-right text-sm font-semibold tabular-nums">{formatVND(o.total)}</td>
 
-                {/* Trạng thái đơn hàng — dropdown đổi stage tại chỗ */}
-                <td>
-                  <StatusSelect order={o} onStatusChange={onStatusChange} />
-                </td>
+                {/* Trạng thái đơn hàng — dropdown đổi stage tại chỗ. Ẩn cùng cột "Xử lý" (STATUS_COLUMN_ENABLED). */}
+                {STATUS_COLUMN_ENABLED ? (
+                  <td>
+                    <StatusSelect order={o} onStatusChange={onStatusChange} />
+                  </td>
+                ) : null}
 
                 {/* Trạng thái tư vấn — phễu hội thoại (đọc) */}
                 <td>

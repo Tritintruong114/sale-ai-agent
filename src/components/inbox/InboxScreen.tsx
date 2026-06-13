@@ -6,7 +6,6 @@ import {
   ArrowUpDown,
   Bot,
   ChevronLeft,
-  CircleDot,
   Flag,
   Headset,
   Inbox,
@@ -148,25 +147,18 @@ function ConversationButton({
           ) : null}
         </span>
 
-        <span className="flex flex-wrap items-center gap-1.5">
-          <span className="rounded-full bg-secondary px-1.5 py-0.5 text-[10px] font-medium text-secondary-foreground">
-            {channelLabel(c.channel)}
+        {/* Chỉ giữ chỉ báo cần xử lý — bỏ chip kênh & trạng thái (nhãn) cho danh sách gọn. */}
+        {human ? (
+          <span className="flex w-fit items-center gap-1 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">
+            <Flag className="size-2.5" aria-hidden />
+            Cần bạn trả lời
           </span>
-          <span className={cn("rounded-full px-1.5 py-0.5 text-[10px] font-medium", STATUS_META[c.status].cls)}>
-            {STATUS_META[c.status].label}
+        ) : c.agentActive ? (
+          <span className="flex w-fit items-center gap-1 text-[10px] text-violet-600">
+            <Bot className="size-2.5" aria-hidden />
+            Agent đang trả lời
           </span>
-          {human ? (
-            <span className="flex items-center gap-1 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">
-              <Flag className="size-2.5" aria-hidden />
-              Cần bạn trả lời
-            </span>
-          ) : c.agentActive ? (
-            <span className="flex items-center gap-1 text-[10px] text-violet-600">
-              <Bot className="size-2.5" aria-hidden />
-              Agent đang trả lời
-            </span>
-          ) : null}
-        </span>
+        ) : null}
       </span>
     </button>
   );
@@ -180,15 +172,6 @@ const STATUS_META: Record<Status, { label: string; cls: string; dot: string; tin
   awaiting_payment: { label: "Chờ thanh toán", cls: "bg-orange-100 text-orange-700", dot: "bg-orange-500", tint: "border-orange-500/30 bg-orange-500/10" },
   closed: { label: "Đã chốt", cls: "bg-emerald-100 text-emerald-700", dot: "bg-emerald-500", tint: "border-emerald-500/30 bg-emerald-500/10" },
 };
-
-const FILTERS: { key: Status | "all"; label: string }[] = [
-  { key: "all", label: "Mọi trạng thái" },
-  { key: "new", label: "Mới" },
-  { key: "exploring", label: "Tìm hiểu" },
-  { key: "quoted", label: "Đã báo giá" },
-  { key: "awaiting_payment", label: "Chờ thanh toán" },
-  { key: "closed", label: "Đã chốt" },
-];
 
 // Lọc theo trạng thái xử lý của hội thoại (M1.2 cũ, nay là filter):
 // handoff = cần người tiếp nhận; agent = agent đang tự trả lời (và không chờ người).
@@ -273,12 +256,6 @@ export function InboxScreen({
   // Panel hồ sơ khách: cố định ở cột phải từ xl trở lên; dưới xl mở dạng overlay.
   const [panelOpen, setPanelOpen] = useState(false); // overlay hồ sơ khách (dưới lg)
   const [infoCollapsed, setInfoCollapsed] = useState(false); // thu gọn cột hồ sơ khách (lg+)
-  const counts = useMemo(() => {
-    const m: Record<string, number> = { all: conversations.length };
-    for (const c of conversations) m[c.status] = (m[c.status] ?? 0) + 1;
-    return m;
-  }, [conversations]);
-
   const attentionCounts = useMemo<Record<AttentionFilter, number>>(
     () => ({
       all: conversations.length,
@@ -494,44 +471,6 @@ export function InboxScreen({
 
             {/* Nhóm phải: trạng thái + trạng thái xử lý */}
             <div className="flex items-center gap-1">
-            {/* Trạng thái */}
-            <Select value={filter} onValueChange={(v) => setFilter(v as Status | "all")}>
-              <SelectTrigger
-                size="sm"
-                className={cn(FILTER_TRIGGER, filter !== "all" && STATUS_META[filter as Status].tint)}
-                aria-label="Lọc theo trạng thái"
-                title={`Trạng thái: ${FILTERS.find((f) => f.key === filter)?.label}`}
-              >
-                {filter === "all" ? (
-                  <CircleDot className="size-4 text-muted-foreground" aria-hidden />
-                ) : (
-                  <span className="flex size-4 items-center justify-center" aria-hidden>
-                    <span className={cn("size-2.5 rounded-full", STATUS_META[filter as Status].dot)} />
-                  </span>
-                )}
-              </SelectTrigger>
-              <SelectContent className="min-w-48">
-                <div className="px-1.5 pb-1 pt-0.5 text-[11px] font-medium text-muted-foreground">Trạng thái</div>
-                {FILTERS.map((f) => {
-                  const meta = f.key === "all" ? null : STATUS_META[f.key as Status];
-                  const n = counts[f.key] ?? 0;
-                  return (
-                    <SelectItem key={f.key} value={f.key}>
-                      {meta ? (
-                        <span className="flex size-4 items-center justify-center" aria-hidden>
-                          <span className={cn("size-2.5 rounded-full", meta.dot)} />
-                        </span>
-                      ) : (
-                        <CircleDot className="size-4 text-muted-foreground" aria-hidden />
-                      )}
-                      {f.label}
-                      {n > 0 ? <span className="ml-auto tabular-nums text-xs text-muted-foreground">{n}</span> : null}
-                    </SelectItem>
-                  );
-                })}
-              </SelectContent>
-            </Select>
-
             {/* Trạng thái xử lý */}
             <Select value={attention} onValueChange={(v) => setAttention(v as AttentionFilter)}>
               <SelectTrigger

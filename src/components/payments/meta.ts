@@ -101,7 +101,7 @@ export const KPI_ICON = { approval: ShieldQuestion, awaiting: Wallet, paid: Bank
 // ── Chi tiết khoản thu (panel docked §6.13) ────────────────────────────────
 // Cộng phút vào chuỗi ISO theo giờ-trên-đồng-hồ, giữ nguyên offset +07:00 (tất định, không lệ thuộc TZ
 // máy chạy — coi wall-clock như UTC để cộng rồi format thủ công, §nguyên tắc 4 hydrate ổn định).
-function shiftIso(iso: string, addMin: number): string {
+export function shiftIso(iso: string, addMin: number): string {
   const t =
     Date.UTC(+iso.slice(0, 4), +iso.slice(5, 7) - 1, +iso.slice(8, 10), +iso.slice(11, 13), +iso.slice(14, 16)) +
     addMin * 60_000;

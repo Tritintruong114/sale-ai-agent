@@ -1,23 +1,23 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { BarChart3, ClipboardList, Menu, MessageSquare, Package, Radio, Sparkles, Store, Wallet } from "lucide-react";
+import { BarChart3, ClipboardList, FlaskConical, Menu, MessageSquare, Package, Radio, ScrollText, Sparkles, Store } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PENDING_COUNTS } from "@/data/counts";
 import { useUiStore } from "@/store/uiStore";
 import { AGENT_CONFIG_SECTIONS, type AgentConfigTab } from "@/components/agent-config/sections";
-import { NAV_ITEMS } from "./nav";
+import { PLAYGROUND_HIDE_AGENT_CHAT } from "@/components/agent-config/playgroundMeta";
+import { NAV_ITEMS, isNavItemActive } from "./nav";
 import { PRODUCTS_OVERVIEW_ENABLED } from "@/components/products/meta";
 import { ORDERS_METRICS_ENABLED } from "@/components/orders/meta";
-import { PAYMENTS_METRICS_ENABLED } from "@/components/payments/meta";
 import { DASHBOARD_MORE_INSIGHTS_ENABLED, MORE_INSIGHTS } from "@/components/dashboard/meta";
 import { TOPBAR_BANNER_SLOT_ID } from "./TopbarBannerSlot";
 
 // Tiêu đề màn suy từ route (NAV_ITEMS — danh sách phẳng mọi mục nav) — §2 design.md.
 function pageTitle(pathname: string): string {
   const match = NAV_ITEMS
-    .filter((i) => (i.href === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(i.href)))
+    .filter((i) => isNavItemActive(i, pathname))
     .sort((a, b) => b.href.length - a.href.length)[0];
   return match?.label ?? "Sale AI Agent";
 }
@@ -32,23 +32,23 @@ export function TopBar() {
   const setOrdersTab = useUiStore((s) => s.setOrdersTab);
   const productsTab = useUiStore((s) => s.productsTab);
   const setProductsTab = useUiStore((s) => s.setProductsTab);
-  const paymentsTab = useUiStore((s) => s.paymentsTab);
-  const setPaymentsTab = useUiStore((s) => s.setPaymentsTab);
   const agentConfigTab = useUiStore((s) => s.agentConfigTab);
   const setAgentConfigTab = useUiStore((s) => s.setAgentConfigTab);
   const shopTab = useUiStore((s) => s.shopTab);
   const setShopTab = useUiStore((s) => s.setShopTab);
+  const playgroundTab = useUiStore((s) => s.playgroundTab);
+  const setPlaygroundTab = useUiStore((s) => s.setPlaygroundTab);
 
   // Màn Quản lý đơn (M2) tách 2 tab ngay trên topbar: "Chỉ số" (đọc) ↔ "Quản lý" (thao tác).
   const isOrders = pathname.startsWith("/orders");
   // Màn Sản phẩm (M3) tách 2 tab ngay trên topbar: "Tổng quan" (đọc) ↔ "Sản phẩm" (thao tác).
   const isProducts = pathname.startsWith("/products");
-  // Màn Thanh toán (M5) tách 2 tab ngay trên topbar: "Chỉ số" (đọc) ↔ "Thu tiền" (thao tác HITL + thu).
-  const isPayments = pathname.startsWith("/payments");
   // Màn Cấu hình Agent (M6): 5 nhóm cấu hình tách thành segmented tabs ngay trên topbar; cuộn ngang khi hẹp.
   const isAgentConfig = pathname.startsWith("/agent-config");
   // Màn Thông tin shop: tách 2 tab — "Thông tin shop" (hồ sơ) ↔ "Kênh kết nối".
   const isShopInfo = pathname.startsWith("/shop-info");
+  // Màn Đào tạo Agent (Playground) — tách riêng khỏi Cấu hình Agent; topbar hiển thị tab "Playground".
+  const isPlayground = pathname.startsWith("/playground");
   // Dashboard: nút chat đổi thành "More Insights" — mở chat + điền sẵn prompt xin agent phân tích số liệu.
   const showMoreInsights = pathname === "/dashboard" && DASHBOARD_MORE_INSIGHTS_ENABLED;
 
@@ -137,30 +137,6 @@ export function TopBar() {
             </TabsList>
           </Tabs>
         </div>
-      ) : isPayments ? (
-        <div className="flex min-w-0 flex-1 items-center gap-2">
-          <h1 className="sr-only">{pageTitle(pathname)}</h1>
-          <Tabs value={paymentsTab} onValueChange={(v) => setPaymentsTab(v as "metrics" | "collect")}>
-            <TabsList variant="line" className="gap-3 px-0">
-              {/* Tab Chỉ số tạm ẩn — bật lại bằng PAYMENTS_METRICS_ENABLED (payments/meta.ts). */}
-              {PAYMENTS_METRICS_ENABLED ? (
-                <TabsTrigger value="metrics" className="flex-none gap-1.5 px-0">
-                  <BarChart3 aria-hidden />
-                  Chỉ số
-                </TabsTrigger>
-              ) : null}
-              <TabsTrigger value="collect" className="flex-none gap-1.5 px-0">
-                <Wallet aria-hidden />
-                Thanh toán
-                {PENDING_COUNTS.payments > 0 ? (
-                  <span className="ml-0.5 inline-flex min-w-4 items-center justify-center rounded-full bg-amber-100 px-1 text-[10px] font-semibold tabular-nums text-amber-700">
-                    {PENDING_COUNTS.payments}
-                  </span>
-                ) : null}
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
       ) : isShopInfo ? (
         <div className="flex min-w-0 flex-1 items-center gap-2">
           <h1 className="sr-only">{pageTitle(pathname)}</h1>
@@ -173,6 +149,22 @@ export function TopBar() {
               <TabsTrigger value="channels" className="flex-none gap-1.5 px-0">
                 <Radio aria-hidden />
                 Kênh kết nối
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+      ) : isPlayground ? (
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <h1 className="sr-only">{pageTitle(pathname)}</h1>
+          <Tabs value={playgroundTab} onValueChange={(v) => setPlaygroundTab(v as "train" | "history")}>
+            <TabsList variant="line" className="gap-3 px-0">
+              <TabsTrigger value="train" className="flex-none gap-1.5 px-0">
+                <FlaskConical aria-hidden />
+                Đào tạo
+              </TabsTrigger>
+              <TabsTrigger value="history" className="flex-none gap-1.5 px-0">
+                <ScrollText aria-hidden />
+                Lịch sử
               </TabsTrigger>
             </TabsList>
           </Tabs>
@@ -194,7 +186,7 @@ export function TopBar() {
             <Sparkles className="size-4" aria-hidden />
             <span className="hidden sm:inline">{MORE_INSIGHTS.label}</span>
           </Button>
-        ) : (
+        ) : isPlayground && PLAYGROUND_HIDE_AGENT_CHAT ? null : (
           // Mở side panel trò chuyện với Agent
           <Button
             variant="outline"
